@@ -28,6 +28,22 @@
 ;;; DEALINGS IN THE SOFTWARE.
 ;;;
 
+;;;
+;;; Installation instructions.
+;;;
+;;; Put in your .emacs file:
+;;;
+;;; (add-to-list 'load-path "<DIR WHERE TODOTXT-MODE LIVES>")
+;;; (require 'todotxt-mode)
+;;;
+;;; Usage instruction
+;;;
+;;; Open a todo.txt file
+;;;
+;;;   M-x todotxt-mode
+;;;   M-x describe-mode
+
+
 (defvar todotxt-mode-map nil "Keymap for todotxt-mode")
 (when (not todotxt-mode-map)
   (setq todotxt-mode-map (make-sparse-keymap))

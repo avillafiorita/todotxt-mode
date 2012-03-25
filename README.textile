@@ -1,13 +1,24 @@
-h1. TODO.TXT Emacs Major Mode
+h1. Emacs Major Mode for TODO.TXT files
 
 A major mode for editing "todo.txt":http://www.todotxt.com files.
 
 The mode provides commands for:
 
-* marking (or unmarking) a task as done
+* toggling the done statuf of a tag
 * setting, changing or deleting a task's priority
 
-h1. Documentation
+h1. Installation
+
+Load (or require) @todotxt-mode@ in your @.emacs@ file.  
+
+For instance, put in your @.emacs@ file:
+
+<pre>
+ (add-to-list 'load-path "<DIR WHERE TODOTXT-MODE LIVES>")
+ (require 'todotxt-mode)
+</pre>
+
+h1. Usage
 
 Open a @todo.txt@ file in Emacs and then
 
@@ -15,7 +26,7 @@ Open a @todo.txt@ file in Emacs and then
   M-x todotxt-mode
 </pre>
 
-When in @todo.txt@ mode, use @M-x describe-mode@ for more information about functions and keymap made available by the major mode.
+When in @todo.txt@ mode, use @M-x describe-mode@ for more information about available functions and keybindings.
 
 
 h1. Quick Links
