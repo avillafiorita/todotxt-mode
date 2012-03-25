@@ -4,7 +4,7 @@ A major mode for editing "todo.txt":http://www.todotxt.com files.
 
 The mode provides commands for:
 
-* toggling the done statuf of a tag
+* toggling the done status of a tag
 * setting, changing or deleting a task's priority
 
 h1. Installation
