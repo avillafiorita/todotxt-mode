@@ -65,7 +65,7 @@
 	("^(A).*$" 0 '(:background "red"))
 	("^(B).*$" 0 '(:background "orange"))
 	("([A-Z]+)" . font-lock-builtin-face)
-	("\\([a-zA-Z0-9_-]+\\):\\([a-zA-Z0-9_-]+\\)" . font-lock-variable-name-face)
+	("\\([a-zA-Z0-9_-]+\\):\\([a-zA-Z0-9._-]+\\)" . font-lock-variable-name-face)
 	("+[a-zA-Z0-9_-]+" . font-lock-function-name-face)
 	("@[a-zA-Z0-9_-]+" . font-lock-type-face)
 	("#[a-zA-Z0-9_-]+" . font-lock-comment-face)
@@ -81,9 +81,9 @@
   (interactive)
   (save-excursion
     (beginning-of-line)
-    (if (looking-at "x ")
-	(delete-char 2)
-      (insert "x "))))
+    (if (looking-at "x \\([0-9]+-[0-9]+-[0-9]+ \\)*")
+		(delete-region (match-beginning 0) (match-end 0))
+	  (insert (concat "x " (format-time-string "%Y-%m-%d "))))))
 
 (defun todotxt-pri (char)
   "Set (or change) priority of task at cursor.
