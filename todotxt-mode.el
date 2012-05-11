@@ -47,6 +47,7 @@
 (defvar todotxt-mode-map nil "Keymap for todotxt-mode")
 (when (not todotxt-mode-map)
   (setq todotxt-mode-map (make-sparse-keymap))
+  (define-key todotxt-mode-map (kbd "C-i") 'dabbrev-expand)
   (define-key todotxt-mode-map (kbd "C-c d") 'todotxt-toggle-done)
   (define-key todotxt-mode-map (kbd "C-c a") 'todotxt-pri-a)
   (define-key todotxt-mode-map (kbd "C-c b") 'todotxt-pri-b)
