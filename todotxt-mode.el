@@ -53,6 +53,7 @@
   (define-key todotxt-mode-map (kbd "C-c b") 'todotxt-pri-b)
   (define-key todotxt-mode-map (kbd "C-c p") 'todotxt-pri)
   (define-key todotxt-mode-map (kbd "C-c n") 'todotxt-nopri)
+  (define-key todotxt-mode-map (kbd "C-c t") 'todotxt-add-todo)
 )
 
 ;;;
@@ -76,6 +77,35 @@
 ;;;
 ;;; Todotxt Functions
 ;;;
+
+(defvar todotxt-default-file (expand-file-name "~/todo.txt") "Default todotxt file")
+
+(defun todotxt-open-file ()
+  "Open the default todo.txt file.
+
+The function uses the elisp variable todotxt-default-file, whose value you might want
+to set in your .emacs file"
+  (interactive)
+  (find-file todotxt-default-file))
+
+
+(defun todotxt-add-todo (todo)
+  "Add a todo to the default todotxt.file.
+
+Three reasons for using the command rather than writing directly to the todo.txt file:
+
+a. the todo is inserted at the end of the todo.txt file (no matter where you are)
+b. the function adds a timestamp to the todo
+c. the function can be called from any buffer (remember to set the variable todotxt-file)"
+  (interactive "sAdd a todo, e.g. (A) Call Mom @phone +FamilialPeace: ")
+  (save-excursion
+	(set-buffer (find-file-noselect todotxt-default-file))
+	(goto-char (point-max))
+	(if (not (equal 0 (current-column))) (insert "\n"))
+	(insert (concat (format-time-string "%Y-%m-%d ") todo))
+	(save-buffer)
+	(message (concat "Todo inserted at the end of " todotxt-default-file))))
+  
 
 (defun todotxt-toggle-done()
   "Toggle done status on task at cursor."
@@ -114,7 +144,6 @@ See also todotxt-pri and todotxt-nopri."
 See also todotxt-pri and todotxt-nopri."
   (interactive)
   (todotxt-pri ?B))
-
 
 (defun todotxt-nopri ()
   "Remove priority of task at cursor."
