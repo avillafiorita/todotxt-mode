@@ -6,10 +6,25 @@ The mode provides commands for:
 
 * toggling the done status of a tag
 * setting, changing or deleting a task's priority
+* opening the default @todo.txt@ file or add todos to the file
+
+The mode supports an extension to the todo.txt syntax that allows to
+specify due dates, start dates, and repetitions. In particular,
+anywhere in the text of a todo you can use:
+
+* @DUE:2012-03-05@ to specify that the todo is due on March 5, 2012.
+* @START:2012-02-16@ to specify that the todo can be started no earlier than February 16, 2012.
+* @RECUR:3.months@ to specify that the todo is to be repeated three months after its @DUE@ date (note: if @RECUR@ is present, then also a @DUE@ date has to be specified in the todo).
+
+Possible repetition patterns:
+
+* @daily@, @weekly@, @monthly@, @yearly@
+* @N.days@, @N.weeks@, @N.months@, @N.years@ for more flexibly repetition periods (also the singular forms can be used, e.g. @1.day@).
+
 
 h1. Installation
 
-Load (or require) @todotxt-mode@ in your @.emacs@ file.  
+Load (or add to your path and require) @todotxt-mode@ in your @.emacs@ file.  
 
 For instance, put in your @.emacs@ file:
 
@@ -28,11 +43,24 @@ Open a @todo.txt@ file in Emacs and then
 
 When in @todo.txt@ mode, use @M-x describe-mode@ for more information about available functions and keybindings.
 
+h1. Configuration
+
+You might want to put the following code in your @.emacs@ file:
+
+<pre>
+(setq todotxt-default-file (expand-file-name "<<WHERE YOUR TODO FILE LIVES>>"))
+(define-key global-map "\C-co" 'todotxt-open-file)
+(define-key global-map "\C-ct" 'todotxt-add-todo)
+</pre>
+
+to quickly access your @todo.txt@ file and quickly add todos to it.
 
 h1. Quick Links
 
 * "Todo.txt":http://www.todotxt.com. The official todo.txt website
+* "todotxt.el":https://github.com/rpdillon/todotxt.el an(other) Emacs mode for managing todo.txt files
 
 h1. License
 
-Distributed under the conditions of the MIT license.
+Distributed under the conditions of the "MIT license":http://opensource.org/licenses/mit-license.php/.
+
