@@ -55,6 +55,12 @@ You might want to put the following code in your @.emacs@ file:
 
 to quickly access your @todo.txt@ file and quickly add todos to it.
 
+If you do *not* want to prepend creation date to newly created todos, change the value of @todotxt-prepend-today-date@ to nil:
+
+<pre>
+(setq todotxt-prepend-today-date nil) ; do not prepend creation date to todos
+</pre>
+
 h1. Quick Links
 
 * "Todo.txt":http://www.todotxt.com. The official todo.txt website

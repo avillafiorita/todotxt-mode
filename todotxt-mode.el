@@ -95,6 +95,9 @@ to set in your .emacs file"
   (find-file todotxt-default-file))
 
 
+(defvar todotxt-prepend-today-date t
+  "Whether today's date is added to newly created todos.")
+
 (defun todotxt-add-todo (todo)
   "Add a todo to the default todotxt.file.
 
@@ -104,11 +107,10 @@ a. the todo is inserted at the end of the todo.txt file (no matter where you are
 b. the function adds a timestamp to the todo
 c. the function can be called from any buffer (remember to set the variable todotxt-file)"
   (interactive "sAdd a todo, e.g. (A) Call Mom @phone +FamilialPeace: ")
-  (save-excursion
-	(set-buffer (find-file-noselect todotxt-default-file))
+  (with-current-buffer (find-file-noselect todotxt-default-file)
 	(goto-char (point-max))
 	(if (not (equal 0 (current-column))) (insert "\n"))
-	(insert (concat (format-time-string "%Y-%m-%d ") todo))
+	(insert (todotxt-prepend-today-date todo))
 	(save-buffer)
 	(message (concat "Todo inserted at the end of " todotxt-default-file))))
   
@@ -129,7 +131,7 @@ the end of the current buffer.
 
 Not meant to be used directly: call todotxt-toggle-done instead,
 which ensures save-excursion and pointer at beginning-of-line."
-  (let ( (todo-as-string (todotxt-get-current-todo)) )
+  (let ( (todo-as-string (todotxt-scrub-date (todotxt-get-current-todo))) )
 	;; complete the current todo (this has to be done in any case
 	(insert (concat "x " (format-time-string "%Y-%m-%d ")))
 	;; instantiate a new one if necessary 
@@ -139,10 +141,22 @@ which ensures save-excursion and pointer at beginning-of-line."
 		  (let ( (new-todo (todotxt-move-dates todo-as-string repetition)) )
 			(goto-char (point-max))
 			(if (not (bolp)) (insert "\n"))
-			(insert new-todo)
+			(insert (todotxt-prepend-today-date new-todo))
 			(message (concat "Inserted "
 							 new-todo 
 							 " at the end of the buffer")))))))
+
+(defun todotxt-prepend-today-date (todo-as-string)
+  "Prepend today's date to the argument (a string representing a todo), according to the value of todotxt-prepend-today-date"
+  (if todotxt-prepend-today-date
+	  (concat (format-time-string "%Y-%m-%d ") todo-as-string)
+	todo-as-string))
+
+(defun todotxt-scrub-date (todo-as-string)
+  "Remove a date from the beginning of a todo, if present"
+  (if (string-match "^[0-9]+-[0-9]+-[0-9]+[ ]*" todo-as-string)
+	  (substring todo-as-string (match-end 0))
+	todo-as-string))
 
 ;;;
 ;;; lower level functions to manage todos
@@ -225,7 +239,7 @@ The function returns a time."
 Do so only for the N-th elements, where N is the length of the shortest list.
  (todotxt-recursive-sum '(1 2 3) '(3 4 5)) -> (4 6 8)"
   (if (and a b)
-	  (cons (+ (car a) (car b)) (rec-sum (cdr a) (cdr b))) 
+	  (cons (+ (car a) (car b)) (todotxt-recursive-sum (cdr a) (cdr b))) 
 	nil))
 
 
@@ -261,14 +275,27 @@ of the repetition strings."
   ;; the string matches. The output is a list of the type (nil nil nil
   ;; ... nil) or (nil nil (0 1 0) nil ...) -- with at most one element which
   ;; is not nil (and if not nil it is the repetition interval)
-  (let ( (result (mapcar '(lambda (x)
-							(if (string-match (concat "RECUR:" (car x)) todo-as-string)
-								(funcall (cdr x) todo-as-string)
-							  nil))
+  (let ( (result (mapcar (lambda (x)
+						   (if (string-match (concat "RECUR:" (car x)) todo-as-string)
+							   (funcall (cdr x) todo-as-string)
+							 nil))
 						 todotxt-repetitions-assoc)) )
 	;; find the first non nil occurrence (if any), return nil otherwise
-	(find-if '(lambda (x) (not (eq x nil))) result)))
+	(todotxt-find-if (lambda (x) (not (eq x nil))) result)))
 
+(defun todotxt-find-if (predicate list)
+  "Reimplementation of find-if in cl package
+ (so that there is no need to load all cl package for just one function)."
+  (if list
+	  (if (funcall predicate (car list))
+		  (car list)
+		(todotxt-find-if predicate (cdr list)))
+	nil))
+
+
+;;;
+;;; Todo priorities
+;;;
 
 (defun todotxt-pri (char)
   "Set (or change) priority of task at cursor.
