@@ -60,6 +60,7 @@
   (define-key todotxt-mode-map (kbd "C-c p") 'todotxt-pri)
   (define-key todotxt-mode-map (kbd "C-c n") 'todotxt-nopri)
   (define-key todotxt-mode-map (kbd "C-c t") 'todotxt-add-todo)
+  (define-key todotxt-mode-map "x" 'todotxt-insert-x-maybe-complete)
 )
 
 ;;;
@@ -122,9 +123,9 @@ c. the function can be called from any buffer (remember to set the variable todo
     (beginning-of-line)
     (if (looking-at "x \\([0-9]+-[0-9]+-[0-9]+ \\)*")
 		(delete-region (match-beginning 0) (match-end 0))
-	  (complete-and-instantiate))))
+	  (todotxt-complete-and-instantiate))))
 
-(defun complete-and-instantiate ()
+(defun todotxt-complete-and-instantiate ()
   "Take todo at point. Mark it as done.  If it contains a REPEAT
 directive, instantiate a new instance of the todo and add it at
 the end of the current buffer.
@@ -157,6 +158,19 @@ which ensures save-excursion and pointer at beginning-of-line."
   (if (string-match "^[0-9]+-[0-9]+-[0-9]+[ ]*" todo-as-string)
 	  (substring todo-as-string (match-end 0))
 	todo-as-string))
+
+(defun todotxt-insert-x-maybe-complete ()
+  "Used to make sure that recurring tasks are instantiated even if a task is completed by writing an 'x' at the beginning of a line.
+
+This function has to be bound to 'x' (in a mode local
+fashion!). If 'x' is written at the beginning of the line, then
+todotxt-complete-and-instantiate is executed; otherwise 'x' is
+inserted."
+  (interactive)
+  (if (looking-at "^")
+	  (todotxt-complete-and-instantiate)
+	(insert "x")))
+  
 
 ;;;
 ;;; lower level functions to manage todos
