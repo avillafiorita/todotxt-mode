@@ -78,14 +78,16 @@
 	("+[a-zA-Z0-9_-]+" . font-lock-function-name-face)
 	("@[a-zA-Z0-9_-]+" . font-lock-type-face)
 	("#[a-zA-Z0-9_-]+" . font-lock-comment-face)
+	("^[0-9]+-[0-9]+-[0-9]+" 0 '(:foreground "gray90"))
 	)
 )
 
 ;;;
-;;; Todotxt Functions
+;;; Todotxt Functions for managing the file
 ;;;
 
-(defvar todotxt-default-file (expand-file-name "~/todo.txt") "Default todotxt file")
+(defvar todotxt-default-file (expand-file-name "~/todo.txt")
+  "Default todotxt file")
 
 (defun todotxt-open-file ()
   "Open the default todo.txt file.
@@ -95,6 +97,9 @@ to set in your .emacs file"
   (interactive)
   (find-file todotxt-default-file))
 
+;;;
+;;; Add a todo
+;;; 
 
 (defvar todotxt-prepend-today-date t
   "Whether today's date is added to newly created todos.")
@@ -104,9 +109,12 @@ to set in your .emacs file"
 
 Three reasons for using the command rather than writing directly to the todo.txt file:
 
-a. the todo is inserted at the end of the todo.txt file (no matter where you are)
+a. the todo is inserted at the end of the todo.txt file
+   (no matter where you are)
 b. the function adds a timestamp to the todo
-c. the function can be called from any buffer (remember to set the variable todotxt-file)"
+   (if todotxt-prepend-today-date is non nil)
+c. the function can be called from any buffer
+   (remember to set the variable todotxt-file)"
   (interactive "sAdd a todo, e.g. (A) Call Mom @phone +FamilialPeace: ")
   (with-current-buffer (find-file-noselect todotxt-default-file)
 	(goto-char (point-max))
@@ -115,196 +123,11 @@ c. the function can be called from any buffer (remember to set the variable todo
 	(save-buffer)
 	(message (concat "Todo inserted at the end of " todotxt-default-file))))
   
-
-(defun todotxt-toggle-done()
-  "Toggle done status on task at cursor."
-  (interactive)
-  (save-excursion
-    (beginning-of-line)
-    (if (looking-at "x \\([0-9]+-[0-9]+-[0-9]+ \\)*")
-		(delete-region (match-beginning 0) (match-end 0))
-	  (todotxt-complete-and-instantiate))))
-
-(defun todotxt-complete-and-instantiate ()
-  "Take todo at point. Mark it as done.  If it contains a REPEAT
-directive, instantiate a new instance of the todo and add it at
-the end of the current buffer.
-
-Not meant to be used directly: call todotxt-toggle-done instead,
-which ensures save-excursion and pointer at beginning-of-line."
-  (let ( (todo-as-string (todotxt-scrub-date (todotxt-get-current-todo))) )
-	;; complete the current todo (this has to be done in any case
-	(insert (concat "x " (format-time-string "%Y-%m-%d ")))
-	;; instantiate a new one if necessary 
-	(let ( (repetition (todotxt-get-repetition todo-as-string)) )
-	  (if repetition
-		  ;; notice that repetition is a list (and not a time)
-		  (let ( (new-todo (todotxt-move-dates todo-as-string repetition)) )
-			(goto-char (point-max))
-			(if (not (bolp)) (insert "\n"))
-			(insert (todotxt-prepend-today-date new-todo))
-			(message (concat "Inserted "
-							 new-todo 
-							 " at the end of the buffer")))))))
-
 (defun todotxt-prepend-today-date (todo-as-string)
   "Prepend today's date to the argument (a string representing a todo), according to the value of todotxt-prepend-today-date"
   (if todotxt-prepend-today-date
 	  (concat (format-time-string "%Y-%m-%d ") todo-as-string)
 	todo-as-string))
-
-(defun todotxt-scrub-date (todo-as-string)
-  "Remove a date from the beginning of a todo, if present"
-  (if (string-match "^[0-9]+-[0-9]+-[0-9]+[ ]*" todo-as-string)
-	  (substring todo-as-string (match-end 0))
-	todo-as-string))
-
-(defun todotxt-insert-x-maybe-complete ()
-  "Used to make sure that recurring tasks are instantiated even if a task is completed by writing an 'x' at the beginning of a line.
-
-This function has to be bound to 'x' (in a mode local
-fashion!). If 'x' is written at the beginning of the line, then
-todotxt-complete-and-instantiate is executed; otherwise 'x' is
-inserted."
-  (interactive)
-  (if (looking-at "^")
-	  (todotxt-complete-and-instantiate)
-	(insert "x")))
-  
-
-;;;
-;;; lower level functions to manage todos
-;;;
-
-(defun todotxt-get-current-todo ()
-  "Get the current todo (= the todo at the line where the cursor is) as a string.
- (the function copies the current line; in the context of a
-todo.txt file this is equivalent to copying a todo)"
-  (interactive)
-  (buffer-substring (line-beginning-position)
-					(line-end-position)))
-
-;; (defun todotxt-replace-current-todo (new-todo-as-string)
-;;   "Replace the todo at the current line with the todo passed as argument.
-;;  (the function replaces the line at point with the string passed
-;; as argument. If applied to a todo.txt file this is equivalent to
-;; replacing the current todo with a new todo)"
-;;   (save-excursion
-;; 	(delete-region (line-beginning-position) (line-end-position))
-;; 	(insert new-todo-as-string)))
-
-(defun todotxt-get-time (type todo-as-string)
-  "Get the date of a field in the current string. 
-
-First argument type is either 'DUE' or 'START'. The function returns the encoded time
-after 'DUE' or 'START' appearing in the todo."
-  (let ((match (string-match 
-				(concat type ":\\([0-9]+\\)-\\([0-9]+\\)-\\([0-9]+\\)") 
-				todo-as-string)))
-	(if match
-		(let ((year  (string-to-number (match-string 1 todo-as-string)))
-			  (month (string-to-number (match-string 2 todo-as-string)))
-			  (day   (string-to-number (match-string 3 todo-as-string))))
-		  (encode-time 0 0 0 day month year))
-	  nil)))
-
-(defun todotxt-set-time (type new-date todo-as-string)
-  "Set the date of a field in the current string. 
-
-  * First argument type is either 'DUE' or 'START'.  
-  * Second argument 'new-date' is the time to insert; it can be nil, in
-    which case nothing is done and todo-as-string is returned untouched. 
-  * Third argument todo-as-string is the string where new-time is inserted."
-  (if new-date
-	  (let ((new-date-as-string (format-time-string "%Y-%m-%d" new-date)))
-		(replace-regexp-in-string (concat type ":[0-9]+-[0-9]+-[0-9]+") 
-								  (concat type ":" new-date-as-string)
-								  todo-as-string))
-	todo-as-string))
-
-
-(defun todotxt-move-dates (todo-as-string interval)
-  "Given a todo as a string (first argument), create a new todo in which 
-START and DUE date are moved according to interval (second argument).
-
-The second argument is typically the output of a todotxt-get-repetition call."
-  ;; this function exploits the fact that todotxt-move-time and todotxt-set-time manage
-  ;; nil values in input (and return what is expected: nil in the first case, the input string in 
-  ;; the second case)
-  (let ( (new-start-time (todotxt-add-interval interval (todotxt-get-time "START" todo-as-string))) 
-		 (new-due-time (todotxt-add-interval interval (todotxt-get-time "DUE" todo-as-string))) )
-	(todotxt-set-time "START" 
-					  new-start-time 
-					  (todotxt-set-time "DUE" new-due-time todo-as-string))))
-
-
-(defun todotxt-add-interval (interval time)
-  "Add interval to time. 
-First argument interval is in the format required by encode-time.
-Second argument time is a time (the output of a encode-time).
-
-The function returns a time."
-  (if (or (eq time nil) (eq interval nil))
-	  nil
-	(apply 'encode-time (todotxt-recursive-sum interval (decode-time time)))))
-
-(defun todotxt-recursive-sum (a b)
-  "Sum the elements of two lists, element by element.
-Do so only for the N-th elements, where N is the length of the shortest list.
- (todotxt-recursive-sum '(1 2 3) '(3 4 5)) -> (4 6 8)"
-  (if (and a b)
-	  (cons (+ (car a) (car b)) (todotxt-recursive-sum (cdr a) (cdr b))) 
-	nil))
-
-
-(defvar todotxt-repetitions-assoc nil
-  "Association list of repetitions and functions that take as input a string and return the time interval specified by the repetition, using the 'time' conventions.")
-(setq todotxt-repetitions-assoc
-  '(("daily"    . (lambda (x) '(0 0 0 1 0 0)))
-	("weekly"   . (lambda (x) '(0 0 0 7 0 0)))
-	("monthly"  . (lambda (x) '(0 0 0 0 1 0)))
-	("yearly"   . (lambda (x) '(0 0 0 0 0 1)))
-	("\\([0-9]+\\)\\.day"   . (lambda (x) (progn
-											(string-match "\\([0-9]+\\)\\.day" x)
-											(list 0 0 0 (string-to-int (match-string 1 x)) 0 0))))
-	("\\([0-9]+\\)\\.week"  . (lambda (x) (progn
-											(string-match "\\([0-9]+\\)\\.week" x)
-											(list 0 0 0 (* 7 (string-to-int (match-string 1 x))) 0 0))))
-	("\\([0-9]+\\)\\.month" . (lambda (x) (progn
-											(string-match "\\([0-9]+\\)\\.month" x)
-											(list 0 0 0 0 (string-to-int (match-string 1 x)) 0))))
-	("\\([0-9]+\\)\\.year"  . (lambda (x) (progn
-											(string-match "\\([0-9]+\\)\\.year" x)
-											(list 0 0 0 0 0 (string-to-int (match-string 1 x))))))))
-
-(defun todotxt-get-repetition (todo-as-string)
-  "Extract a repetition string from todo-as-string (a string
-representing a todo) and return a tuple (seconds minutes hours days months years)
-encoding the repetition and good for encode-time.
-
-The value of todotxt-repetitions-assoc encodes the specification
-of the repetition strings."
-  ;; the following code looks for the car's of repetitions-assoc (regular
-  ;; expressions with repetitions) and applies the cdr of the matching pair if
-  ;; the string matches. The output is a list of the type (nil nil nil
-  ;; ... nil) or (nil nil (0 1 0) nil ...) -- with at most one element which
-  ;; is not nil (and if not nil it is the repetition interval)
-  (let ( (result (mapcar (lambda (x)
-						   (if (string-match (concat "RECUR:" (car x)) todo-as-string)
-							   (funcall (cdr x) todo-as-string)
-							 nil))
-						 todotxt-repetitions-assoc)) )
-	;; find the first non nil occurrence (if any), return nil otherwise
-	(todotxt-find-if (lambda (x) (not (eq x nil))) result)))
-
-(defun todotxt-find-if (predicate list)
-  "Reimplementation of find-if in cl package
- (so that there is no need to load all cl package for just one function)."
-  (if list
-	  (if (funcall predicate (car list))
-		  (car list)
-		(todotxt-find-if predicate (cdr list)))
-	nil))
 
 
 ;;;
@@ -313,6 +136,7 @@ of the repetition strings."
 
 (defun todotxt-pri (char)
   "Set (or change) priority of task at cursor.
+
 The function works only if the task has not been marked as completed."
   (interactive "cSet new priority [A-Z] for task ")
   (if (not (or (and (>= char ?a) (<= char ?z))
@@ -348,6 +172,253 @@ See also todotxt-pri and todotxt-nopri."
     (if (looking-at "(.) ")
 		(delete-char 4)
 	  (message "Task at cursor does not seem to have a valid priority."))))
+
+
+;;;
+;;; Mark a todo as done
+;;; 
+
+(defun todotxt-toggle-done()
+  "Toggle done status on task at cursor."
+  (interactive)
+  (save-excursion
+    (beginning-of-line)
+    (if (looking-at "x \\([0-9]+-[0-9]+-[0-9]+ \\)*")
+		(delete-region (match-beginning 0) (match-end 0))
+	  (todotxt-complete-and-instantiate))))
+
+(defun todotxt-complete-and-instantiate ()
+  "Lower level function for todotxt-toggle-done.
+
+Take todo at point. Mark it as done. If it contains a REPEAT
+directive, instantiate a new instance of the todo and add it at
+the end of the current buffer."
+  (let ( (todo-as-string (todotxt-scrub-date (todotxt-get-current-todo))) )
+	;; complete the current todo (this has to be done in any case
+	(insert (concat "x " (format-time-string "%Y-%m-%d ")))
+	;; instantiate a new one if necessary 
+	(let ( (repetition (todotxt-get-repetition todo-as-string)) )
+	  (if repetition
+		  ;; notice that repetition is a list (and not a time)
+		  (let ( (new-todo (todotxt-move-dates todo-as-string repetition)) )
+			(goto-char (point-max))
+			(if (not (bolp)) (insert "\n"))
+			(insert (todotxt-prepend-today-date new-todo))
+			(message (concat "Inserted "
+							 new-todo 
+							 " at the end of the buffer")))))))
+
+(defun todotxt-scrub-date (todo-as-string)
+  "Remove a date from the beginning of a todo, if present"
+  (if (string-match "^[0-9]+-[0-9]+-[0-9]+[ ]*" todo-as-string)
+	  (substring todo-as-string (match-end 0))
+	todo-as-string))
+
+(defun todotxt-insert-x-maybe-complete ()
+  "Used to make sure that recurring tasks are instantiated even if a task is completed by writing an 'x' at the beginning of a line.
+
+This function has to be bound to 'x' (in a mode local
+fashion!). If 'x' is written at the beginning of the line, then
+todotxt-complete-and-instantiate is executed; otherwise 'x' is
+inserted."
+  (interactive)
+  (if (looking-at "^")
+	  (todotxt-complete-and-instantiate)
+	(insert "x")))
+  
+
+;;;
+;;; Lower level functions to manage todos
+;;;
+
+(defun todotxt-get-current-todo ()
+  "Get the todo at the line where the cursor is as a string.
+
+ (the function copies the current line; in the context of a
+todo.txt file this is equivalent to copying a todo)"
+  (interactive)
+  (buffer-substring (line-beginning-position)
+					(line-end-position)))
+
+;;;
+;;; Todos and projects
+;;;
+
+;;;
+;;; Todos and tags
+;;;
+
+;;;
+;;; Todo and contexts
+;;;
+
+
+;;;
+;;; Todos and dates
+;;; (start, due, creation, completion)
+;;;
+
+(defun todotxt-get-time (type todo-as-string)
+  "Get the date of a field in the current string. 
+
+First argument TYPE is either \"DUE\" or \"START\".
+Second argument TODO-AS-STRING is a string representing a todo, possibly with no dates.
+
+The function returns the calendrical date after TYPE appearing in the
+todo.
+
+Example
+
+  (todotxt-get-time \"DUE\" \"DUE:2012-03-04\")
+  => (0 0 0 4 3 2012)
+"
+  (let ((match (string-match 
+				(concat type ":\\([0-9]+\\)-\\([0-9]+\\)-\\([0-9]+\\)") 
+				todo-as-string)))
+	(if match
+		(let ((year  (string-to-number (match-string 1 todo-as-string)))
+			  (month (string-to-number (match-string 2 todo-as-string)))
+			  (day   (string-to-number (match-string 3 todo-as-string))))
+		  (list 0 0 0 day month year))
+	  nil)))
+
+(defun todotxt-set-time (type new-date todo-as-string)
+  "Set the date of a field in the current string. 
+
+First argument TYPE is either \"DUE\" or \"START\".
+
+Second argument NEW-DATE is the calendrical date to insert
+instead of the current value; it can be nil, in which case
+nothing is done.
+
+Third argument TODO-AS-STRING is the todo in which the date has to be replaced."
+  (if new-date
+	  (let ((new-date-as-string 
+			 (format-time-string "%Y-%m-%d" (apply 'encode-time new-date))))
+		(replace-regexp-in-string (concat type ":[0-9]+-[0-9]+-[0-9]+") 
+								  (concat type ":" new-date-as-string)
+								  todo-as-string))
+	todo-as-string))
+
+
+(defun todotxt-move-dates (todo-as-string interval)
+  "Move START and DUE date of a given amount
+
+First argument TODO-AS-STRING is the todo in which START and DUE
+dates have to be moved.
+
+Second argument INTERVAL is the specification of how much the
+dates have to be moved. It is in the form of a calendrical
+date (e.g. (0 0 0 1 0 0)) and often it is derived from a RECUR
+specification in the todo (see todotxt-get-repetition)."
+  ;; this function exploits the fact that todotxt-add-interval and todotxt-set-time manage
+  ;; nil values in input (and return what is expected: nil in the first case, the input string in 
+  ;; the second case)
+  (let ( (new-start-time 
+		  (todotxt-add-interval interval 
+								(todotxt-get-time "START" todo-as-string)))
+		 (new-due-time 
+		  (todotxt-add-interval interval
+								(todotxt-get-time "DUE" todo-as-string))) )
+	(todotxt-set-time "START" 
+					  new-start-time 
+					  (todotxt-set-time "DUE" new-due-time todo-as-string))))
+
+
+(defun todotxt-add-interval (interval time)
+  "Add INTERVAL to TIME. 
+
+First argument INTERVAL is a calendrical representation of a time
+interval (see todotxt-get-repetition).
+
+Second argument TIME is a calendrical representation of a date.
+
+The function moves TIME by the amount of time specified by INTERVAL.
+
+Example
+
+   (todotxt-add-interval '(0 0 0 1 0 0) '(0 0 0 10 12 2012))
+   => (0 0 0 11 12 2012)"
+  (if (or (eq time nil) (eq interval nil))
+	  nil
+	(todotxt-recursive-sum interval time)))
+
+(defun todotxt-recursive-sum (a b)
+  "Sum the elements of two lists, element by element.
+
+Do so only for the first N-th elements, where N is the length of the shortest list.
+
+ (todotxt-recursive-sum '(1 2 3) '(3 4 5)) -> (4 6 8)"
+  (if (and a b)
+	  (cons (+ (car a) (car b)) (todotxt-recursive-sum (cdr a) (cdr b))) 
+	nil))
+
+(defvar todotxt-repetitions-assoc nil
+  "Association list of repetitions and functions that take as
+  input a string and return the time interval specified by the
+  repetition, using the 'time' conventions.")
+
+(setq todotxt-repetitions-assoc
+  '(("daily"    . (lambda (x) '(0 0 0 1 0 0)))
+	("weekly"   . (lambda (x) '(0 0 0 7 0 0)))
+	("monthly"  . (lambda (x) '(0 0 0 0 1 0)))
+	("yearly"   . (lambda (x) '(0 0 0 0 0 1)))
+	("\\([0-9]+\\)\\.day"   . (lambda (x) (progn
+											(string-match "\\([0-9]+\\)\\.day" x)
+											(list 0 0 0 (string-to-int (match-string 1 x)) 0 0))))
+	("\\([0-9]+\\)\\.week"  . (lambda (x) (progn
+											(string-match "\\([0-9]+\\)\\.week" x)
+											(list 0 0 0 (* 7 (string-to-int (match-string 1 x))) 0 0))))
+	("\\([0-9]+\\)\\.month" . (lambda (x) (progn
+											(string-match "\\([0-9]+\\)\\.month" x)
+											(list 0 0 0 0 (string-to-int (match-string 1 x)) 0))))
+	("\\([0-9]+\\)\\.year"  . (lambda (x) (progn
+											(string-match "\\([0-9]+\\)\\.year" x)
+											(list 0 0 0 0 0 (string-to-int (match-string 1 x))))))))
+
+(defun todotxt-get-repetition (todo-as-string)
+  "Extract a repetition specification from a todo.
+
+Argument TODO-AS-STRING is the todo from which we want to extract
+the repetition specification.
+
+The function returns a calendrical representation of the
+repetition interval, that is a list in the form:
+
+  (seconds minutes hours days months years)
+
+encoding the repetition.
+
+For instance 
+
+  (todotxt-get-repetition \"RECUR:2.weeks\")
+  => (0 0 0 14 0 0)
+
+The variable todotxt-repetitions-assoc encodes the specification
+of the understood repetition strings."
+  ;; the following code looks for the car's of repetitions-assoc (regular
+  ;; expressions with repetitions) and applies the cdr of the matching pair if
+  ;; the string matches. The output is a list of the type (nil nil nil
+  ;; ... nil) or (nil nil (0 1 0) nil ...) -- with at most one element which
+  ;; is not nil (and if not nil it is the repetition interval)
+  (let ( (result (mapcar (lambda (x)
+						   (if (string-match (concat "RECUR:" (car x)) todo-as-string)
+							   (funcall (cdr x) todo-as-string)
+							 nil))
+						 todotxt-repetitions-assoc)) )
+	;; find the first non nil occurrence (if any), return nil otherwise
+	(todotxt-find-if (lambda (x) (not (eq x nil))) result)))
+
+(defun todotxt-find-if (predicate list)
+  "Reimplementation of find-if in cl package.
+
+ (so that there is no need to load all cl package for just one function)."
+  (if list
+	  (if (funcall predicate (car list))
+		  (car list)
+		(todotxt-find-if predicate (cdr list)))
+	nil))
+
 
 ;;;
 ;;; Todotxt Major Mode
