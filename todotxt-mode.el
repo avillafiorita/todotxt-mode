@@ -111,8 +111,10 @@ Three reasons for using the command rather than writing directly to the todo.txt
 
 a. the todo is inserted at the end of the todo.txt file
    (no matter where you are)
+
 b. the function adds a timestamp to the todo
    (if todotxt-prepend-today-date is non nil)
+
 c. the function can be called from any buffer
    (remember to set the variable todotxt-file)"
   (interactive "sAdd a todo, e.g. (A) Call Mom @phone +FamilialPeace: ")
@@ -178,7 +180,7 @@ See also todotxt-pri and todotxt-nopri."
 ;;; Mark a todo as done
 ;;; 
 
-(defun todotxt-toggle-done()
+(defun todotxt-toggle-done ()
   "Toggle done status on task at cursor."
   (interactive)
   (save-excursion
@@ -258,10 +260,31 @@ todo.txt file this is equivalent to copying a todo)"
 ;;; (start, due, creation, completion)
 ;;;
 
-(defun todotxt-get-time (type todo-as-string)
+(defun todotxt-get-due (todo-as-string)
+  "Get the due date of a todo."
+  (todotxt-get-date "d" todo-as-string))
+
+(defun todotxt-get-threshold (todo-as-string)
+  "Get the threshold date of a todo."
+  (todotxt-get-date "t" todo-as-string))
+
+
+(defun todotxt-set-due (new-date todo-as-string)
+  "Set the due date of a todo."
+  (todotxt-set-date "d" new-date todo-as-string))
+
+(defun todotxt-set-threshold (new-date todo-as-string)
+  "Set the threshold date of a todo."
+  (todotxt-set-date "t" new-date todo-as-string))
+
+;;;
+;;; Lower level functions for setting/getting time
+;;;
+
+(defun todotxt-get-date (type todo-as-string)
   "Get the date of a field in the current string. 
 
-First argument TYPE is either \"DUE\" or \"START\".
+First argument TYPE is a string specifying a 'due' or a 'threshold' key (e.g. 'due', 'start')
 Second argument TODO-AS-STRING is a string representing a todo, possibly with no dates.
 
 The function returns the calendrical date after TYPE appearing in the
@@ -269,7 +292,7 @@ todo.
 
 Example
 
-  (todotxt-get-time \"DUE\" \"DUE:2012-03-04\")
+  (todotxt-get-date \"DUE\" \"DUE:2012-03-04\")
   => (0 0 0 4 3 2012)
 "
   (let ((match (string-match 
@@ -282,10 +305,10 @@ Example
 		  (list 0 0 0 day month year))
 	  nil)))
 
-(defun todotxt-set-time (type new-date todo-as-string)
+(defun todotxt-set-date (type new-date todo-as-string)
   "Set the date of a field in the current string. 
 
-First argument TYPE is either \"DUE\" or \"START\".
+First argument TYPE is a string specifying a 'due' or a 'threshold' key (e.g. 'due', 'start')
 
 Second argument NEW-DATE is the calendrical date to insert
 instead of the current value; it can be nil, in which case
@@ -309,20 +332,17 @@ dates have to be moved.
 
 Second argument INTERVAL is the specification of how much the
 dates have to be moved. It is in the form of a calendrical
-date (e.g. (0 0 0 1 0 0)) and often it is derived from a RECUR
+date (e.g. (0 0 0 1 0 0)) and often it is derived from a recurrence
 specification in the todo (see todotxt-get-repetition)."
-  ;; this function exploits the fact that todotxt-add-interval and todotxt-set-time manage
-  ;; nil values in input (and return what is expected: nil in the first case, the input string in 
-  ;; the second case)
-  (let ( (new-start-time 
-		  (todotxt-add-interval interval 
-								(todotxt-get-time "START" todo-as-string)))
-		 (new-due-time 
-		  (todotxt-add-interval interval
-								(todotxt-get-time "DUE" todo-as-string))) )
-	(todotxt-set-time "START" 
-					  new-start-time 
-					  (todotxt-set-time "DUE" new-due-time todo-as-string))))
+  ;; this function exploits the fact that todotxt-add-interval and
+  ;; todotxt-set-date manage nil values in input (and return what is expected:
+  ;; nil in the first case, the input string in the second case)
+  (let ( (new-threshold (todotxt-add-interval interval 
+											  (todotxt-get-threshold todo-as-string)))
+		 (new-due (todotxt-add-interval interval
+										(todotxt-get-due todo-as-string))) )
+	(todotxt-set-threshold new-threshold 
+						   (todotxt-set-due new-due todo-as-string))))
 
 
 (defun todotxt-add-interval (interval time)
@@ -391,7 +411,7 @@ encoding the repetition.
 
 For instance 
 
-  (todotxt-get-repetition \"RECUR:2.weeks\")
+  (todotxt-get-repetition \"r:2.weeks\")
   => (0 0 0 14 0 0)
 
 The variable todotxt-repetitions-assoc encodes the specification
@@ -402,7 +422,7 @@ of the understood repetition strings."
   ;; ... nil) or (nil nil (0 1 0) nil ...) -- with at most one element which
   ;; is not nil (and if not nil it is the repetition interval)
   (let ( (result (mapcar (lambda (x)
-						   (if (string-match (concat "RECUR:" (car x)) todo-as-string)
+						   (if (string-match (concat "r:" (car x)) todo-as-string)
 							   (funcall (cdr x) todo-as-string)
 							 nil))
 						 todotxt-repetitions-assoc)) )
@@ -441,20 +461,22 @@ The mode also implements a syntax extension to support task
 repetition, due and start dates.  In particular the following
 strings have a special meaning in a todo:
 
-* DUE:YYYY-MM-DD (e.g. DUE:2012-12-15), to mark the due date
-* START:YYYY-MM-DD (e.g. START:2012-11-15), to mark the first date when
-  a todo can actually be started.
-* RECUR:repetition, where repetition is any of:
-  - 'daily', 'weekly', 'monthly', 'yearly' or 
-  - N.period where period is 'year', 'month', 'week', 'day'
-  (e.g. RECUR:yearly, RECUR:2.year), to mark that a taks repeats once 
-  completed.
+* d:YYYY-MM-DD (e.g. d:2012-12-15), to mark the due date
+
+* t:YYYY-MM-DD (e.g. t:2012-11-15), to mark the first
+  date (threshold) when a todo can actually be started.
+
+* r:repetition, where repetition is any of: - 'daily', 'weekly',
+  'monthly', 'yearly' or - N.period where period is 'year',
+  'month', 'week', 'day' (e.g. r:yearly, r:2.year), to mark that
+  a taks repeats once completed.
 
 The following actions are taken by todotxt-mode:
 
-* if a task containing a 'RECUR' directive is marked as complete
-  using the todotxt-mark-done command, a new instance of the task
-  is created with the correct DUE and START directives, if present.
+* if a task containing a 'r:' directive is marked as complete
+  using the todotxt-mark-done command (or typing an 'x' in front
+  of the todo), a new instance of the task is created with the
+  correct due (d:) and threshold (t:) directives, if present.
 
 
 \\{todotxt-mode-map}"
