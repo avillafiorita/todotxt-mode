@@ -7,14 +7,33 @@ The mode provides commands for:
 * toggling the done status of a tag
 * setting, changing or deleting a task's priority
 * opening the default @todo.txt@ file or add todos to the file
+* archiving done tasks
+* looking/grouping for specific markup (project, tags, persons)
+* looking/grouping by date
 
-The mode supports an extension to the todo.txt syntax that allows to
-specify due dates, start dates, and repetitions. In particular,
-anywhere in the text of a todo you can use:
+The last two functions work if special markup is used in the todos.
 
-* @DUE:2012-03-05@ to specify that the todo is due on March 5, 2012.
-* @START:2012-02-16@ to specify that the todo can be started no earlier than February 16, 2012.
-* @RECUR:3.months@ to specify that the todo is to be repeated three months after its @DUE@ date (note: if @RECUR@ is present, then also a @DUE@ date has to be specified in the todo).
+h2. Classification of todos
+
+Use the following syntax in a todo:
+
+* +project to specify that a todo belongs to project "project"
+* @person to specify that a todo pertains to person "person"
+* #tag to tag a todo with "tag"
+
+*Example*
+
+<pre>
+  2011-11-23 send email to @mark concerning project +world_domination #important
+</pre>
+
+h2. Managing dates and deadlines
+
+@todotxt@ supports an extension to the todo.txt syntax that allows to specify due dates, start dates, and repetitions. In particular, anywhere in the text of a todo you can use:
+
+* @d:2012-03-05@ to specify that the todo is due on March 5, 2012.
+* @t:2012-02-16@ to specify that the todo can be started no earlier than February 16, 2012.
+* @r:3.months@ to specify that the todo is to be repeated three months after its @DUE@ date (note: if @RECUR@ is present, then also a @DUE@ date has to be specified in the todo).
 
 Possible repetition patterns:
 
@@ -43,6 +62,15 @@ Open a @todo.txt@ file in Emacs and then
 
 When in @todo.txt@ mode, use @M-x describe-mode@ for more information about available functions and keybindings.
 
+Some commands you might want to try:
+
+<pre>
+  M-x todotxt-highlight-dated-todos  
+  M-x todotxt-group-by-date 
+  M-x todotxt-search-by-project
+  M-x todotxt-archive
+</pre>
+
 h1. Configuration
 
 You might want to put the following code in your @.emacs@ file:
@@ -64,7 +92,7 @@ If you do *not* want to prepend creation date to newly created todos, change the
 h1. Quick Links
 
 * "Todo.txt":http://www.todotxt.com. The official todo.txt website
-* "todotxt.el":https://github.com/rpdillon/todotxt.el an(other) Emacs mode for managing todo.txt files
+* "todotxt.el":https://github.com/rpdillon/todotxt.el Another Emacs mode for managing todo.txt files
 
 h1. License
 

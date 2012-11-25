@@ -60,6 +60,9 @@
   (define-key todotxt-mode-map (kbd "C-c p") 'todotxt-pri)
   (define-key todotxt-mode-map (kbd "C-c n") 'todotxt-nopri)
   (define-key todotxt-mode-map (kbd "C-c t") 'todotxt-add-todo)
+  (define-key todotxt-mode-map (kbd "C-c C-p") 'todotxt-group-by-project)
+  (define-key todotxt-mode-map (kbd "C-c C-t") 'todotxt-group-by-tag)
+  (define-key todotxt-mode-map (kbd "C-c C-d") 'todotxt-group-by-date)
   (define-key todotxt-mode-map "x" 'todotxt-insert-x-maybe-complete)
 )
 
@@ -73,6 +76,8 @@
 	("^x .*$" 0 '(:foreground "gray80" :strike-through t))
 	("^(A).*$" 0 '(:background "red"))
 	("^(B).*$" 0 '(:background "orange"))
+	("^.*#waiting.*" 0 '(:foreground "DeepPink1")) ; special tag
+	("^.*#important.*" 0 '(:foreground "IndianRed")) ; special tag
 	("([A-Z]+)" . font-lock-builtin-face)
 	("\\([a-zA-Z0-9_-]+\\):\\([a-zA-Z0-9._-]+\\)" . font-lock-variable-name-face)
 	("+[a-zA-Z0-9_-]+" . font-lock-function-name-face)
@@ -88,6 +93,12 @@
 
 (defvar todotxt-default-file (expand-file-name "~/todo.txt")
   "Default todotxt file")
+(defvar todotxt-default-archive-file (expand-file-name "~/done.txt")
+  "Default todotxt archive file")
+
+;;;
+;;; 1. File Level Actions
+;;;
 
 (defun todotxt-open-file ()
   "Open the default todo.txt file.
@@ -97,8 +108,32 @@ to set in your .emacs file"
   (interactive)
   (find-file todotxt-default-file))
 
+(defun todotxt-archive ()
+  "Archive done tasks found in the current buffer."
+  (interactive)
+  (let ((archive-buffer (find-file-noselect todotxt-default-archive-file)))
+	(save-excursion
+	  (goto-char (point-min))
+	  (while (not (eobp))
+		; if we are looking at a done todo, we delete it from the
+		; buffer (including the final \n and append it to the done
+		; buffer *otherwise* we move one line (notice that deletion in
+		; fact moves the pointer one line down or, better, move the
+		; text one lines up... in any case we do not need to move forward
+		(if (looking-at "^x.*[\r\n]")
+			(let ((done-todo (buffer-substring (match-beginning 0) (match-end 0))))
+			  (save-excursion
+				(set-buffer archive-buffer)
+				(goto-char (point-max))
+				(insert done-todo))
+			  (delete-region (match-beginning 0) (match-end 0)))
+		  (forward-line 1)))
+	  (save-buffer archive-buffer))))
+
+
 ;;;
-;;; Add a todo
+;;; 2. Todo Level Functions
+;;; 2a. Add a todo
 ;;; 
 
 (defvar todotxt-prepend-today-date t
@@ -125,15 +160,20 @@ c. the function can be called from any buffer
 	(save-buffer)
 	(message (concat "Todo inserted at the end of " todotxt-default-file))))
   
+(defalias 'todotxt-insert-todo 'todotxt-add-todo)
+
 (defun todotxt-prepend-today-date (todo-as-string)
   "Prepend today's date to the argument (a string representing a todo), according to the value of todotxt-prepend-today-date"
   (if todotxt-prepend-today-date
-	  (concat (format-time-string "%Y-%m-%d ") todo-as-string)
+	  (if (not (string-match "^([A-Za-z])" todo-as-string))
+		  (concat (format-time-string "%Y-%m-%d ") todo-as-string)
+		(concat (substring todo-as-string 0 3) (format-time-string " %Y-%m-%d ") (substring todo-as-string 3)))
 	todo-as-string))
 
 
 ;;;
-;;; Todo priorities
+;;; 2. Todo Level Functions
+;;; 2b. Todo priorities
 ;;;
 
 (defun todotxt-pri (char)
@@ -177,7 +217,8 @@ See also todotxt-pri and todotxt-nopri."
 
 
 ;;;
-;;; Mark a todo as done
+;;; 2. Todo Level Functions
+;;; 2c. Mark a todo as done
 ;;; 
 
 (defun todotxt-toggle-done ()
@@ -195,24 +236,29 @@ See also todotxt-pri and todotxt-nopri."
 Take todo at point. Mark it as done. If it contains a REPEAT
 directive, instantiate a new instance of the todo and add it at
 the end of the current buffer."
-  (let ( (todo-as-string (todotxt-scrub-date (todotxt-get-current-todo))) )
-	;; complete the current todo (this has to be done in any case
-	(insert (concat "x " (format-time-string "%Y-%m-%d ")))
-	;; instantiate a new one if necessary 
-	(let ( (repetition (todotxt-get-repetition todo-as-string)) )
-	  (if repetition
-		  ;; notice that repetition is a list (and not a time)
-		  (let ( (new-todo (todotxt-move-dates todo-as-string repetition)) )
-			(goto-char (point-max))
-			(if (not (bolp)) (insert "\n"))
-			(insert (todotxt-prepend-today-date new-todo))
-			(message (concat "Inserted "
-							 new-todo 
-							 " at the end of the buffer")))))))
+  (save-excursion
+	(let ( (todo-text (todotxt-scrub-date-and-priority (todotxt-get-current-todo))) )
+	  ;; complete the current todo (this has to be done in any case
+	  (beginning-of-line)
+	  ;; remove the priority from the completed todo
+	  (if (looking-at "^\\(([A-Za-z]) \\)")
+		  (delete-region (match-beginning 0) (match-end 0)))
+	  (insert (concat "x " (format-time-string "%Y-%m-%d ")))
+	  ;; instantiate a new todo if necessary 
+	  (let ( (repetition (todotxt-get-repetition todo-text)) )
+		(if repetition
+			;; notice that repetition is a list (and not a time)
+			(let ( (new-todo (todotxt-move-dates todo-text repetition)) )
+			  (goto-char (point-max))
+			  (if (not (bolp)) (insert "\n"))
+			  (insert (todotxt-prepend-today-date new-todo))
+			  (message (concat "Inserted "
+							   new-todo 
+							   " at the end of the buffer"))))))))
 
-(defun todotxt-scrub-date (todo-as-string)
-  "Remove a date from the beginning of a todo, if present"
-  (if (string-match "^[0-9]+-[0-9]+-[0-9]+[ ]*" todo-as-string)
+(defun todotxt-scrub-date-and-priority (todo-as-string)
+  "Remove date and priority from the beginning of a todo, if present"
+  (if (string-match "^\\(([A-Za-z]) \\)*[0-9]+-[0-9]+-[0-9]+[ ]*" todo-as-string)
 	  (substring todo-as-string (match-end 0))
 	todo-as-string))
 
@@ -230,7 +276,7 @@ inserted."
   
 
 ;;;
-;;; Lower level functions to manage todos
+;;; 3. Lower level functions to manage todos
 ;;;
 
 (defun todotxt-get-current-todo ()
@@ -243,17 +289,141 @@ todo.txt file this is equivalent to copying a todo)"
 					(line-end-position)))
 
 ;;;
-;;; Todos and projects
+;;; Todos and projects, Todo and Tags
 ;;;
 
-;;;
-;;; Todos and tags
-;;;
+(defun todotxt-search-by-project () 
+  "List all todos of a project, completing over project names."
+  (interactive)
+  (todotxt-show-machinery '(lambda () 
+							(todotxt-collect-special-strings "\\+[a-zA-Z0-9_-]+"))))
+
+(defun todotxt-search-by-tag () 
+  "List all todos with a tag, completing over tag names."
+  (interactive)
+  (todotxt-show-machinery '(lambda () 
+							(todotxt-collect-special-strings "#[a-zA-Z0-9_-]+"))))
+
+(defun todotxt-search-by-date () 
+  "List all todos with a special date tag (today, upcoming, ...), completing over date names."
+  (interactive)
+  (todotxt-highlight-dated-todos)
+  (todotxt-show-machinery '(lambda () 
+							(todotxt-collect-special-strings "-[a-zA-Z][a-zA-Z0-9_-]+"))))
+
+(defun todotxt-search-by-person () 
+  "List all todos with a person tag (e.g. @someone)"
+  (interactive)
+  (todotxt-highlight-dated-todos)
+  (todotxt-show-machinery '(lambda () 
+							(todotxt-collect-special-strings "@[a-zA-Z0-9_-]+"))))
+
+;;
+;; Lower level function to collect special tags
+;;
+
+(defun todotxt-show-machinery (function)
+  "Low level machinery for displaying special marked todos (projects, tags, datetags)."
+  (save-excursion
+  (let ( (elements (funcall function)) )
+	(let ( (found-set (completing-read "Enter what you want to display: " elements)))
+	  (occur found-set)))))
+
+(defun todotxt-collect-special-strings (regexp)
+  "Return all occurrences of regexp in current-buffer as a list good for completing-read.
+The function is the basic infrastructure for special marked strings in todotxt."
+  (let ( (elements nil) )
+	(save-excursion
+	  (goto-char (point-min))
+	  (while (re-search-forward regexp nil t)
+		(add-to-list 'elements (buffer-substring-no-properties (match-beginning 0) (match-end 0)))))
+	elements))
 
 ;;;
-;;; Todo and contexts
+;;; present todos according to various criteria
 ;;;
 
+(defun todotxt-group-by-date ()
+  "Present todos grouped by date (today, upcoming and overdue)"
+  (interactive)
+  (todotxt-get-and-print-todos-with-keys "Date" '("-today" "-ucpoming" "-overdue")))
+
+(defun todotxt-group-by-project ()
+  "Present todos grouped by project"
+  (interactive)
+  (todotxt-get-and-print-todos-with-keys "Project" (todotxt-collect-special-strings "\\+[a-zA-Z0-9_-]+")))
+
+(defun todotxt-group-by-tag ()
+  "Present todos grouped by tag"
+  (interactive)
+  (todotxt-get-and-print-todos-with-keys "Tag" (todotxt-collect-special-strings "#[a-zA-Z0-9_-]+")))
+
+(defun todotxt-group-by-person ()
+  "Present todos grouped by tag"
+  (interactive)
+  (todotxt-get-and-print-todos-with-keys "Person" (todotxt-collect-special-strings "@[a-zA-Z0-9_-]+")))
+
+;;;
+;;; Lower level machinery
+;;; 
+
+(defun todotxt-get-and-print-todos-with-keys (buffer-name key-list)
+  "Organize todos according to key-list and output them to *Output* buffer"
+  (let ( (output-list (todotxt-get-todos-with-keys key-list)) )
+	(let ( (buffer (get-buffer-create (concat "*TODOTXT Grouping by " buffer-name "*"))) )
+	  (set-buffer buffer)
+	  (erase-buffer)
+	  (todotxt-print-todos output-list)
+	  (pop-to-buffer buffer))))
+
+(defun todotxt-get-todos-with-keys (key-list)
+  "Organize todos according to key-list"
+  (if (not key-list)
+		nil
+	(cons (todotxt-get-todos-with-key (car key-list))
+		  (todotxt-get-todos-with-keys (cdr key-list)))))
+
+(defun todotxt-get-todos-with-key (key)
+  "Get all the todos matching a key and return a list in the form (key . ((buffer point TODO1) ... (buffer point TODON)))"
+  (let ( (output-list nil)
+		 (buffer (current-buffer)) )
+	(save-excursion
+	  (goto-char (point-min))
+	  (while (not (eobp))
+		(let ( (todo (todotxt-get-current-todo)) )
+		  (if (string-match key todo)
+			  (setq output-list (append (list (list buffer (point) todo)) output-list)))
+		  (forward-line 1)))
+	  (cons key output-list))))
+
+(defun todotxt-print-todos (list)
+  "Print the todos organized by keys.
+
+The structure is as follows:
+
+  ( ('keyA' ( (TODO1) (TODO2) ...))
+    ('keyB' ...))
+
+where TODO is a list
+
+  (BUFFER POINT TODO-TXT)"
+  (while list
+	; get the first element of the list (a group)
+	(let ( (first (car list)) )
+	  (insert "\n* TODOS MATCHING: " (car first) "\n")
+	  (let ( (todos (cdr first)) )
+		(while todos
+		  (let ( (todo (car todos)) )
+			(insert "\t")
+			(insert-button (nth 2 todo)
+						   'target-buffer (nth 0 todo)
+						   'target-pos    (nth 1 todo)
+						   'action       '(lambda (x)
+											(pop-to-buffer (button-get x 'target-buffer))
+											(goto-char (button-get x 'target-pos))))
+			(insert "\n")
+			(setq todos (cdr todos)))))
+	  (setq list (cdr list)))))
 
 ;;;
 ;;; Todos and dates
@@ -441,6 +611,120 @@ of the understood repetition strings."
 
 
 ;;;
+;;; Chronic Expression
+;;;
+
+(defvar todotxt-repetitions-assoc nil
+  "Association list of repetitions and functions that take as
+  input a string and return the time interval specified by the
+  repetition, using the 'time' conventions.")
+
+(setq todotxt-repetitions-assoc
+  '(("[0-9] day"    . (lambda (x) '(0 0 0 1 0 0)))
+
+
+	("weekly"   . (lambda (x) '(0 0 0 7 0 0)))
+	("monthly"  . (lambda (x) '(0 0 0 0 1 0)))
+	("yearly"   . (lambda (x) '(0 0 0 0 0 1)))
+	("\\([0-9]+\\)\\.day"   . (lambda (x) (progn
+											(string-match "\\([0-9]+\\)\\.day" x)
+											(list 0 0 0 (string-to-int (match-string 1 x)) 0 0))))
+	("\\([0-9]+\\)\\.week"  . (lambda (x) (progn
+											(string-match "\\([0-9]+\\)\\.week" x)
+											(list 0 0 0 (* 7 (string-to-int (match-string 1 x))) 0 0))))
+	("\\([0-9]+\\)\\.month" . (lambda (x) (progn
+											(string-match "\\([0-9]+\\)\\.month" x)
+											(list 0 0 0 0 (string-to-int (match-string 1 x)) 0))))
+	("\\([0-9]+\\)\\.year"  . (lambda (x) (progn
+											(string-match "\\([0-9]+\\)\\.year" x)
+											(list 0 0 0 0 0 (string-to-int (match-string 1 x))))))))
+
+;;;
+;;; Mark tasks according to dates
+;;;
+
+(defvar todotxt-upcoming-days 7
+  "*How many days raise the upcoming flag.
+Default value, 7, means that a task is marked as upcoming if its due date is in the next seven days.")
+
+(defvar todotxt-today-face '(foreground-color . "red1")
+  "*Face to use to highlight tasks due today.")
+
+(defvar todotxt-overdue-face '(foreground-color . "dark red")
+  "*Face to use to highlight tasks overdue tasks.")
+
+(defvar todotxt-upcoming-face '(foreground-color . "dark blue")
+  "*Face to use to highlight upcoming tasks.")
+
+(defvar todotxt-inactive-face '(foreground-color . "gray90")
+  "*Face to use to highlight inactive tasks.")
+
+
+(defun todotxt-highlight-dated-todos ()
+  (interactive)
+  (save-excursion
+	;; remove all the special strings (today, overdue, ...)
+	(goto-char (point-min))
+	(while (re-search-forward " -\\(overdue\\|today\\|upcoming\\|inactive\\)" nil t)
+	  (replace-match ""))
+	;; remove all overlays
+	(remove-overlays (point-min) (point-max))
+	;; now look for due and threshold dates and re-insert the string and the overlays
+	(goto-char (point-min))
+	  (while (not (eobp))
+		(let ((current-todo (todotxt-get-current-todo)))
+		  (let ( (due (todotxt-get-due current-todo))
+				 (threshold (todotxt-get-threshold current-todo)) )
+			(if due
+				(progn
+				  (if (todotxt-overdue due) (todotxt-highlight-dated-todo "-overdue" todotxt-overdue-face))
+				  (if (todotxt-today due) (todotxt-highlight-dated-todo "-today" todotxt-today-face))
+				  (if (todotxt-next-n-days due todotxt-upcoming-days)
+					  (todotxt-highlight-dated-todo "-upcoming" todotxt-upcoming-face))))
+			(if threshold
+				(if (todotxt-inactive threshold) (todotxt-highlight-dated-todo "-inactive" todotxt-inactive-face)))
+			(forward-line 1))))))
+
+;;
+;; predicates for special dates and special
+;;
+
+(defun todotxt-overdue (due)
+  (let ( (due-in-days (time-to-days (apply 'encode-time due)))
+		 (today-in-days (time-to-days (current-time))) )
+	(< due-in-days today-in-days)))
+
+(defun todotxt-today (due)
+  (let ( (due-in-days (time-to-days (apply 'encode-time due)))
+		 (today-in-days (time-to-days (current-time))) )
+	(equal due-in-days today-in-days)))
+
+(defun todotxt-inactive (threshold)
+  (let ( (threshold-in-days (time-to-days (apply 'encode-time threshold)))
+		 (today-in-days (time-to-days (current-time))) )
+	(> threshold-in-days today-in-days)))
+
+(defun todotxt-next-n-days (due n)
+  (let ( (due-in-days (time-to-days (apply 'encode-time due)))
+		 (today-in-days (time-to-days (current-time))) )
+	(and (> (+ today-in-days n) due-in-days)
+		 (not (todotxt-today due))
+		 (not (todotxt-overdue due)))))
+  
+
+;;
+;; insert special string and add overlay to current line
+;; low level machinery for hightlight-dated-todos
+
+(defun todotxt-highlight-dated-todo (string face)
+  (save-excursion
+	(end-of-line)
+	(insert " " string)
+	(let ( (overlay (make-overlay (line-beginning-position) (line-end-position))) )
+	  (overlay-put overlay 'face face))))
+	
+
+;;;
 ;;; Todotxt Major Mode
 ;;;
 
@@ -488,4 +772,6 @@ The following actions are taken by todotxt-mode:
   (setq font-lock-defaults '(todotxt-mode-keywords))
   (run-hooks 'todotxt-mode-hook))
 
+
 (provide 'todotxt-mode)
+
