@@ -346,22 +346,30 @@ The function is the basic infrastructure for special marked strings in todotxt."
 (defun todotxt-group-by-date ()
   "Present todos grouped by date (today, upcoming and overdue)"
   (interactive)
-  (todotxt-get-and-print-todos-with-keys "Date" '("-today" "-ucpoming" "-overdue")))
+  (progn
+	(todotxt-highlight-dated-todos)
+	(todotxt-get-and-print-todos-with-keys "Date" '("-today" "-ucpoming" "-overdue"))))
 
 (defun todotxt-group-by-project ()
   "Present todos grouped by project"
   (interactive)
-  (todotxt-get-and-print-todos-with-keys "Project" (todotxt-collect-special-strings "\\+[a-zA-Z0-9_-]+")))
+  (progn 
+	(todotxt-highlight-dated-todos)
+	(todotxt-get-and-print-todos-with-keys "Project" (todotxt-collect-special-strings "\\+[a-zA-Z0-9_-]+"))))
 
 (defun todotxt-group-by-tag ()
   "Present todos grouped by tag"
   (interactive)
-  (todotxt-get-and-print-todos-with-keys "Tag" (todotxt-collect-special-strings "#[a-zA-Z0-9_-]+")))
+  (progn
+	(todotxt-highlight-dated-todos)
+	(todotxt-get-and-print-todos-with-keys "Tag" (todotxt-collect-special-strings "#[a-zA-Z0-9_-]+"))))
 
 (defun todotxt-group-by-person ()
   "Present todos grouped by tag"
   (interactive)
-  (todotxt-get-and-print-todos-with-keys "Person" (todotxt-collect-special-strings "@[a-zA-Z0-9_-]+")))
+  (progn
+	(todotxt-highlight-dated-todos)
+	(todotxt-get-and-print-todos-with-keys "Person" (todotxt-collect-special-strings "@[a-zA-Z0-9_-]+"))))
 
 ;;;
 ;;; Lower level machinery
