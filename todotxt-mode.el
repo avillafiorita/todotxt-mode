@@ -2,7 +2,7 @@
 ;;; todotxt-mode is a major mode for editing todo.txt files
 ;;; (see http://www.todotxt.com for more information about format and apps)
 ;;;
-;;; (c) 2012 Adolfo Villafiorita <adolfo.villafiorita@ict4g.net>
+;;; (c) 2012, 2013 Adolfo Villafiorita <adolfo.villafiorita@me.com>
 ;;;
 ;;; This code is NOT part of GNU Emacs and is distributed under the conditions
 ;;; of the MIT License
