@@ -122,8 +122,7 @@ to set in your .emacs file"
 		; text one lines up... in any case we do not need to move forward
 		(if (looking-at "^x.*[\r\n]")
 			(let ((done-todo (buffer-substring (match-beginning 0) (match-end 0))))
-			  (save-excursion
-				(set-buffer archive-buffer)
+			  (with-current-buffer archive-buffer
 				(goto-char (point-max))
 				(insert done-todo))
 			  (delete-region (match-beginning 0) (match-end 0)))
@@ -426,6 +425,10 @@ where TODO is a list
 			(insert-button (nth 2 todo)
 						   'target-buffer (nth 0 todo)
 						   'target-pos    (nth 1 todo)
+; it does not work and I do not know why :-(
+;						   'mouse-action '(lambda (x)
+;											(pop-to-buffer (button-get x 'target-buffer))
+;											(goto-char (button-get x 'target-pos)))
 						   'action       '(lambda (x)
 											(pop-to-buffer (button-get x 'target-buffer))
 											(goto-char (button-get x 'target-pos))))
@@ -434,26 +437,51 @@ where TODO is a list
 	  (setq list (cdr list)))))
 
 ;;;
+;;; Todos and done status
+;;;
+(defun todotxt-is-done (todo-as-string)
+  (equal 0 (string-match "^x .*" todo-as-string)))
+
+;;;
 ;;; Todos and dates
 ;;; (start, due, creation, completion)
 ;;;
 
+;;
+;; Tags configuration
+;;
+
+(defvar todotxt-due-tag "d"
+  "The default tag used for due dates.
+It defaults to 'd'; set it to 'due' for integration with TaskCoach")
+
+(defvar todotxt-threshold-tag "t"
+  "The default tag used for threshold dates (tasks are inactive before the threshold).
+It defaults to 't'; set it to 'start' for integration with TaskCoach")
+
+(defvar todotxt-repetition-tag "r"
+  "The default tag used for repetition intervals.")
+
+;;
+;; Todos and dates
+;; 
+
 (defun todotxt-get-due (todo-as-string)
   "Get the due date of a todo."
-  (todotxt-get-date "d" todo-as-string))
+  (todotxt-get-date todotxt-due-tag todo-as-string))
 
 (defun todotxt-get-threshold (todo-as-string)
   "Get the threshold date of a todo."
-  (todotxt-get-date "t" todo-as-string))
+  (todotxt-get-date todotxt-threshold-tag todo-as-string))
 
 
 (defun todotxt-set-due (new-date todo-as-string)
   "Set the due date of a todo."
-  (todotxt-set-date "d" new-date todo-as-string))
+  (todotxt-set-date todotxt-due-tag new-date todo-as-string))
 
 (defun todotxt-set-threshold (new-date todo-as-string)
   "Set the threshold date of a todo."
-  (todotxt-set-date "t" new-date todo-as-string))
+  (todotxt-set-date todotxt-threshold-tag new-date todo-as-string))
 
 ;;;
 ;;; Lower level functions for setting/getting time
@@ -462,7 +490,7 @@ where TODO is a list
 (defun todotxt-get-date (type todo-as-string)
   "Get the date of a field in the current string. 
 
-First argument TYPE is a string specifying a 'due' or a 'threshold' key (e.g. 'due', 'start')
+First argument TYPE is a string specifying a 'due' or a 'threshold' key (e.g. 'd', 't')
 Second argument TODO-AS-STRING is a string representing a todo, possibly with no dates.
 
 The function returns the calendrical date after TYPE appearing in the
@@ -472,7 +500,12 @@ Example
 
   (todotxt-get-date \"DUE\" \"DUE:2012-03-04\")
   => (0 0 0 4 3 2012)
-"
+
+The function is agostic to the key used (in fact, the key is passed as input to the
+function). 
+
+I.e. d:2012-03-13, DUE:2012-03-13, due:2012-03-13, START:2012-03-13 will all return
+the same value, 2012-03-13"
   (let ((match (string-match 
 				(concat type ":\\([0-9]+\\)-\\([0-9]+\\)-\\([0-9]+\\)") 
 				todo-as-string)))
@@ -574,6 +607,7 @@ Do so only for the first N-th elements, where N is the length of the shortest li
 											(string-match "\\([0-9]+\\)\\.year" x)
 											(list 0 0 0 0 0 (string-to-int (match-string 1 x))))))))
 
+
 (defun todotxt-get-repetition (todo-as-string)
   "Extract a repetition specification from a todo.
 
@@ -600,7 +634,7 @@ of the understood repetition strings."
   ;; ... nil) or (nil nil (0 1 0) nil ...) -- with at most one element which
   ;; is not nil (and if not nil it is the repetition interval)
   (let ( (result (mapcar (lambda (x)
-						   (if (string-match (concat "r:" (car x)) todo-as-string)
+						   (if (string-match (concat todotxt-repetition-tag (car x)) todo-as-string)
 							   (funcall (cdr x) todo-as-string)
 							 nil))
 						 todotxt-repetitions-assoc)) )
@@ -682,15 +716,21 @@ Default value, 7, means that a task is marked as upcoming if its due date is in 
 	  (while (not (eobp))
 		(let ((current-todo (todotxt-get-current-todo)))
 		  (let ( (due (todotxt-get-due current-todo))
+				 (done (todotxt-is-done current-todo))
 				 (threshold (todotxt-get-threshold current-todo)) )
-			(if due
+			(if (not done)
 				(progn
-				  (if (todotxt-overdue due) (todotxt-highlight-dated-todo "-overdue" todotxt-overdue-face))
-				  (if (todotxt-today due) (todotxt-highlight-dated-todo "-today" todotxt-today-face))
-				  (if (todotxt-next-n-days due todotxt-upcoming-days)
-					  (todotxt-highlight-dated-todo "-upcoming" todotxt-upcoming-face))))
-			(if threshold
-				(if (todotxt-inactive threshold) (todotxt-highlight-dated-todo "-inactive" todotxt-inactive-face)))
+				  (if due
+					  (progn
+						(if (todotxt-overdue due) 
+							(todotxt-highlight-dated-todo "-overdue" todotxt-overdue-face))
+						(if (todotxt-today due) 
+							(todotxt-highlight-dated-todo "-today" todotxt-today-face))
+						(if (todotxt-next-n-days due todotxt-upcoming-days)
+							(todotxt-highlight-dated-todo "-upcoming" todotxt-upcoming-face))))
+				  (if threshold
+					  (if (todotxt-inactive threshold)
+						  (todotxt-highlight-dated-todo "-inactive" todotxt-inactive-face)))))
 			(forward-line 1))))))
 
 ;;
@@ -730,7 +770,6 @@ Default value, 7, means that a task is marked as upcoming if its due date is in 
 	(insert " " string)
 	(let ( (overlay (make-overlay (line-beginning-position) (line-end-position))) )
 	  (overlay-put overlay 'face face))))
-	
 
 ;;;
 ;;; Todotxt Major Mode

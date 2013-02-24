@@ -8,6 +8,7 @@ The mode provides commands for:
 * setting, changing or deleting a task's priority
 * opening the default @todo.txt@ file or add todos to the file
 * archiving done tasks
+* highlighting tasks by status 
 * looking/grouping for specific markup (project, tags, persons)
 * looking/grouping by date
 
