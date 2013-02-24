@@ -8,11 +8,9 @@ The mode provides commands for:
 * setting, changing or deleting a task's priority
 * opening the default @todo.txt@ file or add todos to the file
 * archiving done tasks
-* highlighting tasks by status 
-* looking/grouping for specific markup (project, tags, persons)
-* looking/grouping by date
-
-The last two functions work if special markup is used in the todos.
+* filtering/grouping by +project, #tag, or @person
+* support for special markup to set dates
+* filtering/grouping by status (overdue, due, today, upcoming)
 
 h2. Classification of todos
 
@@ -41,6 +39,49 @@ Possible repetition patterns:
 * @daily@, @weekly@, @monthly@, @yearly@
 * @N.days@, @N.weeks@, @N.months@, @N.years@ for more flexibly repetition periods (also the singular forms can be used, e.g. @1.day@).
 
+h2. Filtering Tasks
+
+You can use the following commands to filter the buffer and highlight only tasks related to a specific project, with a given tag, or with a given status:
+
+<pre>
+  M-x todotxt-filter-by-project
+  M-x todotxt-filter-by-tag
+  M-x todotxt-filter-by-person
+  M-x todotxt-filter-by-status
+</pre>
+
+By default all taks become *invisible*, that is, they are still in the buffer, but they are not shown.  Use the command:
+
+<pre>
+  M-x todotxt-clear-filter
+</pre>
+
+If you feel unconfortable with filtering making irrelevant tasks invisible, change the value of the variable @todotxt-hide-is-invisible@ to @false@.
+
+h2. Grouping Tasks
+
+Tasks can be grouped by project, person, tag, or status with the commands:
+
+<pre>
+  M-x todotxt-group-by-project
+  M-x todotxt-group-by-tag
+  M-x todotxt-group-by-person
+  M-x todotxt-group-by-status
+</pre>
+
+The commands create a special buffer with the todos grouped according to the specifications.
+
+h2. Sorting Tasks
+
+Tasks can be sorted by creation date (if the creation date is prepended to the todo), project, or status with the commands:
+
+<pre>
+  M-x todotxt-sort-by-creation-date
+  M-x todotxt-group-by-project
+  M-x todotxt-group-by-status
+</pre>
+
+The commands create a special buffer with the todos grouped according to the specifications.
 
 h1. Installation
 

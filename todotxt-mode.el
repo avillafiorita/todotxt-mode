@@ -57,9 +57,18 @@
   (define-key todotxt-mode-map (kbd "C-c d") 'todotxt-toggle-done)
   (define-key todotxt-mode-map (kbd "C-c a") 'todotxt-pri-a)
   (define-key todotxt-mode-map (kbd "C-c b") 'todotxt-pri-b)
+  (define-key todotxt-mode-map (kbd "C-c c") 'todotxt-pri-c)
   (define-key todotxt-mode-map (kbd "C-c p") 'todotxt-pri)
   (define-key todotxt-mode-map (kbd "C-c n") 'todotxt-nopri)
   (define-key todotxt-mode-map (kbd "C-c t") 'todotxt-add-todo)
+  (define-key todotxt-mode-map (kbd "C-c C-f p") 'todotxt-filter-by-project)
+  (define-key todotxt-mode-map (kbd "C-c C-f t") 'todotxt-filter-by-tag)
+  (define-key todotxt-mode-map (kbd "C-c C-f @") 'todotxt-filter-by-person)
+  (define-key todotxt-mode-map (kbd "C-c C-f d") 'todotxt-filter-by-status)
+  (define-key todotxt-mode-map (kbd "C-c C-f -") 'todotxt-clear-filter)
+  (define-key todotxt-mode-map (kbd "C-c C-s n") 'todotxt-sort-by-creation-date)
+  (define-key todotxt-mode-map (kbd "C-c C-s p") 'todotxt-sort-by-project)
+  (define-key todotxt-mode-map (kbd "C-c C-s d") 'todotxt-sort-by-status)
   (define-key todotxt-mode-map (kbd "C-c C-p") 'todotxt-group-by-project)
   (define-key todotxt-mode-map (kbd "C-c C-t") 'todotxt-group-by-tag)
   (define-key todotxt-mode-map (kbd "C-c C-d") 'todotxt-group-by-date)
@@ -76,25 +85,27 @@
 	("^x .*$" 0 '(:foreground "gray80" :strike-through t))
 	("^(A).*$" 0 '(:background "red"))
 	("^(B).*$" 0 '(:background "orange"))
-	("^.*#waiting.*" 0 '(:foreground "DeepPink1")) ; special tag
-	("^.*#important.*" 0 '(:foreground "IndianRed")) ; special tag
+	("^(C).*$" 0 '(:background "orange"))
+	;("^.*#waiting.*" 0 '(:foreground "DeepPink1")) ; special tag
+	;("^.*#important.*" 0 '(:foreground "IndianRed")) ; special tag
 	("([A-Z]+)" . font-lock-builtin-face)
 	("\\([a-zA-Z0-9_-]+\\):\\([a-zA-Z0-9._-]+\\)" . font-lock-variable-name-face)
 	("+[a-zA-Z0-9_-]+" . font-lock-function-name-face)
 	("@[a-zA-Z0-9_-]+" . font-lock-type-face)
+	("#important" 0 '(:foreground "orange red")) ; special tag
+	("#waiting" 0 '(:foreground "dark orange")) ; special tag
 	("#[a-zA-Z0-9_-]+" . font-lock-comment-face)
-	("^[0-9]+-[0-9]+-[0-9]+" 0 '(:foreground "gray90"))
-	)
-)
+	("^[0-9]+-[0-9]+-[0-9]+" 0 '(:foreground "gray90"))))
 
 ;;;
 ;;; Todotxt Functions for managing the file
 ;;;
 
 (defvar todotxt-default-file (expand-file-name "~/todo.txt")
-  "Default todotxt file")
+  "*Default todotxt file")
+
 (defvar todotxt-default-archive-file (expand-file-name "~/done.txt")
-  "Default todotxt archive file")
+  "*Default todotxt archive file")
 
 ;;;
 ;;; 1. File Level Actions
@@ -106,7 +117,8 @@
 The function uses the elisp variable todotxt-default-file, whose value you might want
 to set in your .emacs file"
   (interactive)
-  (find-file todotxt-default-file))
+  (find-file todotxt-default-file)
+  (todotxt-mode))
 
 (defun todotxt-archive ()
   "Archive done tasks found in the current buffer."
@@ -131,8 +143,11 @@ to set in your .emacs file"
 
 
 ;;;
-;;; 2. Todo Level Functions
-;;; 2a. Add a todo
+;;; 2.  Todo Level Functions
+;;;
+
+;;;
+;;; 2.1 Add a todo
 ;;; 
 
 (defvar todotxt-prepend-today-date t
@@ -166,13 +181,14 @@ c. the function can be called from any buffer
   (if todotxt-prepend-today-date
 	  (if (not (string-match "^([A-Za-z])" todo-as-string))
 		  (concat (format-time-string "%Y-%m-%d ") todo-as-string)
-		(concat (substring todo-as-string 0 3) (format-time-string " %Y-%m-%d ") (substring todo-as-string 3)))
+		(concat (substring todo-as-string 0 3) 
+				(format-time-string " %Y-%m-%d ") 
+				(substring todo-as-string 3)))
 	todo-as-string))
 
 
 ;;;
-;;; 2. Todo Level Functions
-;;; 2b. Todo priorities
+;;; 2.2. Set priorities
 ;;;
 
 (defun todotxt-pri (char)
@@ -205,6 +221,12 @@ See also todotxt-pri and todotxt-nopri."
   (interactive)
   (todotxt-pri ?B))
 
+(defun todotxt-pri-c ()
+  "Set priority of task at cursor to 'C'.
+See also todotxt-pri and todotxt-nopri."
+  (interactive)
+  (todotxt-pri ?C))
+
 (defun todotxt-nopri ()
   "Remove priority of task at cursor."
   (interactive)
@@ -216,8 +238,7 @@ See also todotxt-pri and todotxt-nopri."
 
 
 ;;;
-;;; 2. Todo Level Functions
-;;; 2c. Mark a todo as done
+;;; 2.3 Mark a todo as done
 ;;; 
 
 (defun todotxt-toggle-done ()
@@ -275,7 +296,7 @@ inserted."
   
 
 ;;;
-;;; 3. Lower level functions to manage todos
+;;; 3. Todo as an object
 ;;;
 
 (defun todotxt-get-current-todo ()
@@ -287,49 +308,82 @@ todo.txt file this is equivalent to copying a todo)"
   (buffer-substring (line-beginning-position)
 					(line-end-position)))
 
+(defun todotxt-is-done (todo-as-string)
+  "Is the todo done?"
+  (equal 0 (string-match "^x .*" todo-as-string)))
+
+
 ;;;
-;;; Todos and projects, Todo and Tags
+;;; 4. Filter todos according to status
 ;;;
 
-(defun todotxt-search-by-project () 
+(defun todotxt-filter-by-project () 
   "List all todos of a project, completing over project names."
   (interactive)
-  (todotxt-show-machinery '(lambda () 
-							(todotxt-collect-special-strings "\\+[a-zA-Z0-9_-]+"))))
+  (todotxt-filter-machinery "\\+[a-zA-Z0-9_-]+"))
 
-(defun todotxt-search-by-tag () 
+(defun todotxt-filter-by-tag () 
   "List all todos with a tag, completing over tag names."
   (interactive)
-  (todotxt-show-machinery '(lambda () 
-							(todotxt-collect-special-strings "#[a-zA-Z0-9_-]+"))))
+  (todotxt-filter-machinery "#[a-zA-Z0-9_-]+"))
 
-(defun todotxt-search-by-date () 
-  "List all todos with a special date tag (today, upcoming, ...), completing over date names."
+(defun todotxt-filter-by-person () 
+  "List all todos with a person tag (e.g. @someone)."
   (interactive)
-  (todotxt-highlight-dated-todos)
-  (todotxt-show-machinery '(lambda () 
-							(todotxt-collect-special-strings "-[a-zA-Z][a-zA-Z0-9_-]+"))))
+  (todotxt-filter-machinery "@[a-zA-Z0-9_-]+"))
 
-(defun todotxt-search-by-person () 
-  "List all todos with a person tag (e.g. @someone)"
+(defun todotxt-filter-by-status () 
+  "List all todos with given status (e.g. -overdue)."
   (interactive)
-  (todotxt-highlight-dated-todos)
-  (todotxt-show-machinery '(lambda () 
-							(todotxt-collect-special-strings "@[a-zA-Z0-9_-]+"))))
+  (todotxt-mark-dated-todos)
+  (todotxt-filter-machinery "-\\(overdue\\|today\\|upcoming\\|inactive\\)"))
+
+(defalias 'todotxt-filter-by-date 'todotxt-filter-by-status)
+
+(defun todotxt-clear-filter ()
+  "Clear all filters."
+  (interactive)
+  (remove-overlays (point-min) (point-max)))
 
 ;;
-;; Lower level function to collect special tags
+;; 4.1. Lower level function to filter
 ;;
 
-(defun todotxt-show-machinery (function)
-  "Low level machinery for displaying special marked todos (projects, tags, datetags)."
+(defvar todotxt-hide-face '(foreground-color . "gray90")
+  "*Face to use to hide tasks.")
+
+(defvar todotxt-hide-is-invisible t
+  "*If true, hidden tasks are made invisible, otherwise
+  todotxt-hide-face is used.")
+
+(defun todotxt-hide-todo ()
+  "Low level machinery to hide a todo using overlays."
+  (let ( (overlay (make-overlay (line-beginning-position)
+								(+ 1 (line-end-position)))) )
+	(overlay-put overlay 'invisible todotxt-hide-is-invisible)
+	(overlay-put overlay 'face todotxt-hide-face)))
+
+(defun todotxt-filter-machinery (pattern)
+  "Low level machinery for displaying specially marked todos 
+(projects, tags, people, statuses)."
   (save-excursion
-  (let ( (elements (funcall function)) )
-	(let ( (found-set (completing-read "Enter what you want to display: " elements)))
-	  (occur found-set)))))
+	(let ( (elements (todotxt-collect-special-strings pattern)) )
+	  (let ( (chosen-string 
+			  (completing-read "Enter what you want to display: " 
+							   elements)) )
+		;; remove all overlays
+		(remove-overlays (point-min) (point-max))
+		;; now reinsert them
+		(goto-char (point-min))
+		(while (not (eobp))
+		  (if (not (re-search-forward chosen-string (line-end-position) t))
+			  (todotxt-hide-todo))
+		  (forward-line 1))))))
 
 (defun todotxt-collect-special-strings (regexp)
-  "Return all occurrences of regexp in current-buffer as a list good for completing-read.
+  "Low level machinery to collect special strings from buffer.
+
+It return all occurrences of regexp in current-buffer as a list good for completing-read.
 The function is the basic infrastructure for special marked strings in todotxt."
   (let ( (elements nil) )
 	(save-excursion
@@ -339,39 +393,33 @@ The function is the basic infrastructure for special marked strings in todotxt."
 	elements))
 
 ;;;
-;;; present todos according to various criteria
+;;; 5. Present todos according to various criteria
 ;;;
 
 (defun todotxt-group-by-date ()
   "Present todos grouped by date (today, upcoming and overdue)"
   (interactive)
   (progn
-	(todotxt-highlight-dated-todos)
+	(todotxt-mark-dated-todos)
 	(todotxt-get-and-print-todos-with-keys "Date" '("-today" "-ucpoming" "-overdue"))))
 
 (defun todotxt-group-by-project ()
   "Present todos grouped by project"
   (interactive)
-  (progn 
-	(todotxt-highlight-dated-todos)
-	(todotxt-get-and-print-todos-with-keys "Project" (todotxt-collect-special-strings "\\+[a-zA-Z0-9_-]+"))))
+  (todotxt-get-and-print-todos-with-keys "Project" (todotxt-collect-special-strings "\\+[a-zA-Z0-9_-]+")))
 
 (defun todotxt-group-by-tag ()
   "Present todos grouped by tag"
   (interactive)
-  (progn
-	(todotxt-highlight-dated-todos)
-	(todotxt-get-and-print-todos-with-keys "Tag" (todotxt-collect-special-strings "#[a-zA-Z0-9_-]+"))))
+  (todotxt-get-and-print-todos-with-keys "Tag" (todotxt-collect-special-strings "#[a-zA-Z0-9_-]+")))
 
 (defun todotxt-group-by-person ()
   "Present todos grouped by tag"
   (interactive)
-  (progn
-	(todotxt-highlight-dated-todos)
-	(todotxt-get-and-print-todos-with-keys "Person" (todotxt-collect-special-strings "@[a-zA-Z0-9_-]+"))))
+  (todotxt-get-and-print-todos-with-keys "Person" (todotxt-collect-special-strings "@[a-zA-Z0-9_-]+")))
 
 ;;;
-;;; Lower level machinery
+;;; 5.1 Lower level machinery for grouping
 ;;; 
 
 (defun todotxt-get-and-print-todos-with-keys (buffer-name key-list)
@@ -391,7 +439,11 @@ The function is the basic infrastructure for special marked strings in todotxt."
 		  (todotxt-get-todos-with-keys (cdr key-list)))))
 
 (defun todotxt-get-todos-with-key (key)
-  "Get all the todos matching a key and return a list in the form (key . ((buffer point TODO1) ... (buffer point TODON)))"
+  "Get all the todos matching a key.
+
+The function returns a list in the form:
+
+ (key . ((buffer point TODO1) ... (buffer point TODON)))"
   (let ( (output-list nil)
 		 (buffer (current-buffer)) )
 	(save-excursion
@@ -437,34 +489,27 @@ where TODO is a list
 	  (setq list (cdr list)))))
 
 ;;;
-;;; Todos and done status
-;;;
-(defun todotxt-is-done (todo-as-string)
-  (equal 0 (string-match "^x .*" todo-as-string)))
-
-;;;
-;;; Todos and dates
-;;; (start, due, creation, completion)
-;;;
+;;; 6. Todos and dates
+;;; 
 
 ;;
-;; Tags configuration
-;;
+;; 6.1 Date tags configuration
+;;     (due, threshold, and repeat tags)
 
 (defvar todotxt-due-tag "d"
-  "The default tag used for due dates.
+  "*The default tag used for due dates.
 It defaults to 'd'; set it to 'due' for integration with TaskCoach")
 
 (defvar todotxt-threshold-tag "t"
-  "The default tag used for threshold dates (tasks are inactive before the threshold).
+  "*The default tag used for threshold dates (tasks are inactive before the threshold).
 It defaults to 't'; set it to 'start' for integration with TaskCoach")
 
 (defvar todotxt-repetition-tag "r"
-  "The default tag used for repetition intervals.")
+  "*The default tag used for repetition intervals.")
 
 ;;
-;; Todos and dates
-;; 
+;; 6.2 Getters and Setters of Dates
+;;
 
 (defun todotxt-get-due (todo-as-string)
   "Get the due date of a todo."
@@ -473,7 +518,6 @@ It defaults to 't'; set it to 'start' for integration with TaskCoach")
 (defun todotxt-get-threshold (todo-as-string)
   "Get the threshold date of a todo."
   (todotxt-get-date todotxt-threshold-tag todo-as-string))
-
 
 (defun todotxt-set-due (new-date todo-as-string)
   "Set the due date of a todo."
@@ -484,11 +528,11 @@ It defaults to 't'; set it to 'start' for integration with TaskCoach")
   (todotxt-set-date todotxt-threshold-tag new-date todo-as-string))
 
 ;;;
-;;; Lower level functions for setting/getting time
+;;; 6.3 Lower level functions for setting/getting time
 ;;;
 
 (defun todotxt-get-date (type todo-as-string)
-  "Get the date of a field in the current string. 
+  "Common function to get the date of a field in the current string. 
 
 First argument TYPE is a string specifying a 'due' or a 'threshold' key (e.g. 'd', 't')
 Second argument TODO-AS-STRING is a string representing a todo, possibly with no dates.
@@ -517,7 +561,7 @@ the same value, 2012-03-13"
 	  nil)))
 
 (defun todotxt-set-date (type new-date todo-as-string)
-  "Set the date of a field in the current string. 
+  "Lower level function to set the date of a field in the current string. 
 
 First argument TYPE is a string specifying a 'due' or a 'threshold' key (e.g. 'due', 'start')
 
@@ -651,9 +695,8 @@ of the understood repetition strings."
 		(todotxt-find-if predicate (cdr list)))
 	nil))
 
-
 ;;;
-;;; Chronic Expression
+;;; 5.4 Chronic Expression
 ;;;
 
 (defvar todotxt-repetitions-assoc nil
@@ -682,12 +725,50 @@ of the understood repetition strings."
 											(list 0 0 0 0 0 (string-to-int (match-string 1 x))))))))
 
 ;;;
-;;; Mark tasks according to dates
+;;; 7. Mark tasks according to dates
 ;;;
 
 (defvar todotxt-upcoming-days 7
   "*How many days raise the upcoming flag.
 Default value, 7, means that a task is marked as upcoming if its due date is in the next seven days.")
+
+(defun todotxt-mark-dated-todos ()
+  "Add status strings to todos (e.g. -overdue, ...)"
+  (save-excursion
+	;; remove all the special strings (today, overdue, ...)
+	(goto-char (point-min))
+	(while (re-search-forward " -\\(overdue\\|today\\|upcoming\\|inactive\\)" nil t)
+	  (replace-match ""))
+	;; now look for due and threshold dates and re-insert the string and the overlays
+	(goto-char (point-min))
+	(while (not (eobp))
+	  (let ((current-todo (todotxt-get-current-todo)))
+		(let ( (due (todotxt-get-due current-todo))
+			   (done (todotxt-is-done current-todo))
+			   (threshold (todotxt-get-threshold current-todo)) )
+		  (if (not done)
+			  (progn
+				(if due
+					(progn
+					  (if (todotxt-overdue due) 
+						  (todotxt-mark-dated-todo "-overdue"))
+					  (if (todotxt-today due)
+						  (todotxt-mark-dated-todo "-today"))
+					  (if (todotxt-next-n-days due todotxt-upcoming-days)
+						  (todotxt-mark-dated-todo "-upcoming"))))
+				(if threshold
+					(if (todotxt-inactive threshold)
+						(todotxt-mark-dated-todo "-inactive")))))
+		  (forward-line 1))))))
+
+(defun todotxt-mark-dated-todo (string)
+  (end-of-line)
+  (insert " " string))
+
+;;;
+;;; Add overlays according to date status
+;;; (an alternative to filter)
+;;;
 
 (defvar todotxt-today-face '(foreground-color . "red1")
   "*Face to use to highlight tasks due today.")
@@ -701,40 +782,44 @@ Default value, 7, means that a task is marked as upcoming if its due date is in 
 (defvar todotxt-inactive-face '(foreground-color . "gray90")
   "*Face to use to highlight inactive tasks.")
 
-
 (defun todotxt-highlight-dated-todos ()
+  "Add special overlays to highlight todos by status.
+
+Similar to filter, it shows all todos."
   (interactive)
   (save-excursion
-	;; remove all the special strings (today, overdue, ...)
-	(goto-char (point-min))
-	(while (re-search-forward " -\\(overdue\\|today\\|upcoming\\|inactive\\)" nil t)
-	  (replace-match ""))
-	;; remove all overlays
 	(remove-overlays (point-min) (point-max))
-	;; now look for due and threshold dates and re-insert the string and the overlays
+	;; mark all todos
+	(todotxt-mark-dated-todos)
+	;; now add the overlays
 	(goto-char (point-min))
-	  (while (not (eobp))
-		(let ((current-todo (todotxt-get-current-todo)))
-		  (let ( (due (todotxt-get-due current-todo))
-				 (done (todotxt-is-done current-todo))
-				 (threshold (todotxt-get-threshold current-todo)) )
-			(if (not done)
-				(progn
-				  (if due
-					  (progn
-						(if (todotxt-overdue due) 
-							(todotxt-highlight-dated-todo "-overdue" todotxt-overdue-face))
-						(if (todotxt-today due) 
-							(todotxt-highlight-dated-todo "-today" todotxt-today-face))
-						(if (todotxt-next-n-days due todotxt-upcoming-days)
-							(todotxt-highlight-dated-todo "-upcoming" todotxt-upcoming-face))))
-				  (if threshold
-					  (if (todotxt-inactive threshold)
-						  (todotxt-highlight-dated-todo "-inactive" todotxt-inactive-face)))))
-			(forward-line 1))))))
+	(while (not (eobp))
+	  (let ((current-todo (todotxt-get-current-todo)))
+		(let ( (due (todotxt-get-due current-todo))
+			   (done (todotxt-is-done current-todo))
+			   (threshold (todotxt-get-threshold current-todo)) )
+		  (if (not done)
+			  (progn
+				(if due
+					(progn
+					  (if (todotxt-overdue due) 
+						  (todotxt-highlight-dated-todo todotxt-overdue-face))
+					  (if (todotxt-today due) 
+						  (todotxt-highlight-dated-todo todotxt-today-face))
+					  (if (todotxt-next-n-days due todotxt-upcoming-days)
+						  (todotxt-highlight-dated-todo todotxt-upcoming-face))))
+				(if threshold
+					(if (todotxt-inactive threshold)
+						(todotxt-highlight-dated-todo todotxt-inactive-face)))))
+		  (forward-line 1))))))
+
+(defun todotxt-highlight-dated-todo (face)
+  "Lower level function to highlight a todo."
+  (let ( (overlay (make-overlay (line-beginning-position) (line-end-position))) )
+	(overlay-put overlay 'face face)))
 
 ;;
-;; predicates for special dates and special
+;; 7.1 predicates for special dates
 ;;
 
 (defun todotxt-overdue (due)
@@ -760,16 +845,164 @@ Default value, 7, means that a task is marked as upcoming if its due date is in 
 		 (not (todotxt-overdue due)))))
   
 
-;;
-;; insert special string and add overlay to current line
-;; low level machinery for hightlight-dated-todos
+;;;
+;;; 10. Sorting
+;;;
 
-(defun todotxt-highlight-dated-todo (string face)
-  (save-excursion
-	(end-of-line)
-	(insert " " string)
-	(let ( (overlay (make-overlay (line-beginning-position) (line-end-position))) )
-	  (overlay-put overlay 'face face))))
+;;
+;; 10.1 Generic functions
+;;
+
+(defun todotxt-next-record-function ()
+  (end-of-line) ; so that on the last line, forward-line cannot move point
+  (forward-line 1))
+
+(defun todotxt-end-record-function ()
+  (end-of-line))
+
+;;
+;; 10.2 Sort by priority
+;;
+
+(defun todotxt-sort-by-priority ()
+  "Sort by priority."
+  (interactive)
+  (sort-lines nil (point-min) (point-max)))
+
+;;
+;; 10.3 Sort by creation date
+;;
+
+(defun todotxt-sort-by-creation-date ()
+  "Sort by creation date.
+
+With a prefix argument, operate on current region only.
+
+In the natural ordering:
+
+* tasks are ordered ascending by creation date
+* tasks with no creation date are sorted alphabetically and usually will appear
+  after tasks with creation dates (unless the task starts with a number).
+* done tasks appear at the end (or before any task starting with 'y' or 'z'."
+  (interactive)
+  (goto-char (point-min))
+  (sort-subr nil
+			 'todotxt-next-record-function 
+			 'todotxt-end-record-function
+			 'todotxt-get-creation-date
+			 nil
+			 nil))
+
+;;
+;; this function is used for sorting: it is a bad idea to change the empty
+;; string to nil (see the documentation of sort-subr for the explanation)
+;; 
+
+(defun todotxt-get-creation-date ()
+  "Get creation date or the special strings if no creation date is set."
+  (interactive)
+  (beginning-of-line)
+  (if (todotxt-is-done (todotxt-get-current-todo))
+	  "9999-99-99" ; done tasks at the end
+	(let ( (match
+			(re-search-forward "\\(([A-Z])\\)*\\([0-9]+-[0-9]+-[0-9]+\\)"
+							   (line-end-position)
+							   t)) )
+	  (if match (match-string-no-properties  2) ""))))
+
+;;
+;; 10.3 Sort by task status
+;; 
+
+(defun todotxt-sort-by-status ()
+  "Sort by task status.
+
+Tasks are presented in the following order:
+
+1. today
+2. overdue
+3. upcoming
+4. some day (not inactive but also not overdue, upcoming, or due today)
+5. inactive
+6. done"
+  (interactive)
+  (todotxt-mark-dated-todos)
+  (goto-char (point-min))
+  (sort-subr nil
+			 'todotxt-next-record-function
+			 'todotxt-end-record-function
+			 'todotxt-get-status-key
+			 nil
+			 'todotxt-dated-todos-order))
+
+(defun todotxt-get-status-key ()
+  "Return the dated status key of a todo."
+  (beginning-of-line)
+  (if (todotxt-is-done (todotxt-get-current-todo))
+	  "-done"
+	(let ( (match (re-search-forward " \\(-[a-z]+\\)" (line-end-position) t)) )
+	  (if match (match-string 1) "-some_day"))))
+	  
+(defvar todotxt-dated-todos-natural-ordering 
+  '(("-overdue" . 1)
+	("-today" . 2)
+	("-upcoming" . 3)
+	("-some_day" . 4)
+	("-inactive" . 5)
+	("-done" . 6))
+  "The natural ordering of dated todos status. An association list used by the sorting functions.")
+
+(defun todotxt-dated-todos-order (a b)
+  "Internal function used to sort by dated-todo status"
+  (< (cdr (assoc a todotxt-dated-todos-natural-ordering))
+	 (cdr (assoc b todotxt-dated-todos-natural-ordering))))
+
+;;
+;; 10.4 Sort by project
+;; 
+
+(defun todotxt-sort-by-project ()
+  "Sort by project.
+If more than a project is specified in a todo, sort by the first
+one encountered from the beginning of line."
+  (interactive)
+  (goto-char (point-min))
+  (sort-subr nil
+			 'todotxt-next-record-function
+			 'todotxt-end-record-function
+			 'todotxt-get-project))
+
+;;
+;; TODO: not really DRY here. see todotxt-get-status-key +
+;; it would be nice to encapsulate all functions referring to a todo 
+;;
+
+(defun todotxt-get-project ()
+  "Return the project of a todo or the empty string."
+  (interactive)
+  (beginning-of-line)
+  (let ( (match (re-search-forward " \\(+[a-z]+\\)" (line-end-position) t)) )
+	(if match (match-string 1) "")))
+
+
+;; (defun todotxt-region-beginning ()
+;;   "Return the beginning of the line at which region-beginning points.
+;; This function is used to ensure sorting functions working on regions do not break any todo.
+;; E.g. if you set a region comprising only part of a todo, this function ensures all the todo 
+;; is included."
+;;   (save-excursion
+;; 	(goto-char (region-beginning))
+;; 	(line-beginning-position)))
+
+;; (defun todotxt-region-end ()
+;;   "Return the beginning of the line at which region-beginning points.
+;; This function is used to ensure sorting functions working on regions do not break any todo.
+;; E.g. if you set a region comprising only part of a todo, this function ensures all the todo 
+;; is included."
+;;   (save-excursion
+;; 	(goto-char (region-beginning))
+;; 	(line-end-position)))
+
 
 ;;;
 ;;; Todotxt Major Mode
