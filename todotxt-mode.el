@@ -90,6 +90,7 @@
 	;("^.*#important.*" 0 '(:foreground "IndianRed")) ; special tag
 	("([A-Z]+)" . font-lock-builtin-face)
 	("\\([a-zA-Z0-9_-]+\\):\\([a-zA-Z0-9._-]+\\)" . font-lock-variable-name-face)
+	("-\\([a-zA-Z0-9_-]+\\)" . font-lock-variable-name-face)
 	("+[a-zA-Z0-9_-]+" . font-lock-function-name-face)
 	("@[a-zA-Z0-9_-]+" . font-lock-type-face)
 	("#important" 0 '(:foreground "orange red")) ; special tag
