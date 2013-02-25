@@ -639,17 +639,17 @@ Do so only for the first N-th elements, where N is the length of the shortest li
 	("weekly"   . (lambda (x) '(0 0 0 7 0 0)))
 	("monthly"  . (lambda (x) '(0 0 0 0 1 0)))
 	("yearly"   . (lambda (x) '(0 0 0 0 0 1)))
-	("\\([0-9]+\\)\\.day"   . (lambda (x) (progn
-											(string-match "\\([0-9]+\\)\\.day" x)
+	("\\([0-9]+\\)\\.days?"   . (lambda (x) (progn
+											(string-match "\\([0-9]+\\)\\.days?" x)
 											(list 0 0 0 (string-to-int (match-string 1 x)) 0 0))))
-	("\\([0-9]+\\)\\.week"  . (lambda (x) (progn
-											(string-match "\\([0-9]+\\)\\.week" x)
+	("\\([0-9]+\\)\\.weeks?"  . (lambda (x) (progn
+											(string-match "\\([0-9]+\\)\\.weeks?" x)
 											(list 0 0 0 (* 7 (string-to-int (match-string 1 x))) 0 0))))
-	("\\([0-9]+\\)\\.month" . (lambda (x) (progn
-											(string-match "\\([0-9]+\\)\\.month" x)
+	("\\([0-9]+\\)\\.months?" . (lambda (x) (progn
+											(string-match "\\([0-9]+\\)\\.months?" x)
 											(list 0 0 0 0 (string-to-int (match-string 1 x)) 0))))
-	("\\([0-9]+\\)\\.year"  . (lambda (x) (progn
-											(string-match "\\([0-9]+\\)\\.year" x)
+	("\\([0-9]+\\)\\.years?"  . (lambda (x) (progn
+											(string-match "\\([0-9]+\\)\\.years?" x)
 											(list 0 0 0 0 0 (string-to-int (match-string 1 x))))))))
 
 
@@ -679,7 +679,7 @@ of the understood repetition strings."
   ;; ... nil) or (nil nil (0 1 0) nil ...) -- with at most one element which
   ;; is not nil (and if not nil it is the repetition interval)
   (let ( (result (mapcar (lambda (x)
-						   (if (string-match (concat todotxt-repetition-tag (car x)) todo-as-string)
+						   (if (string-match (concat todotxt-repetition-tag ":" (car x)) todo-as-string)
 							   (funcall (cdr x) todo-as-string)
 							 nil))
 						 todotxt-repetitions-assoc)) )
