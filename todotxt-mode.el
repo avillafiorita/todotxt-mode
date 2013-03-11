@@ -61,6 +61,7 @@
   (define-key todotxt-mode-map (kbd "C-c p") 'todotxt-pri)
   (define-key todotxt-mode-map (kbd "C-c n") 'todotxt-nopri)
   (define-key todotxt-mode-map (kbd "C-c t") 'todotxt-add-todo)
+  (define-key todotxt-mode-map (kbd "C-c C-a") 'todotxt-send-to-reminders)
   (define-key todotxt-mode-map (kbd "C-c C-f p") 'todotxt-filter-by-project)
   (define-key todotxt-mode-map (kbd "C-c C-f t") 'todotxt-filter-by-tag)
   (define-key todotxt-mode-map (kbd "C-c C-f @") 'todotxt-filter-by-person)
@@ -90,7 +91,7 @@
 	;("^.*#important.*" 0 '(:foreground "IndianRed")) ; special tag
 	("([A-Z]+)" . font-lock-builtin-face)
 	("\\([a-zA-Z0-9_-]+\\):\\([a-zA-Z0-9._-]+\\)" . font-lock-variable-name-face)
-	("-\\([a-zA-Z0-9_-]+\\)" . font-lock-variable-name-face)
+	("-\\([a-zA-Z_-]+\\)" . font-lock-variable-name-face)
 	("+[a-zA-Z0-9_-]+" . font-lock-function-name-face)
 	("@[a-zA-Z0-9_-]+" . font-lock-type-face)
 	("#important" 0 '(:foreground "orange red")) ; special tag
@@ -508,6 +509,9 @@ It defaults to 't'; set it to 'start' for integration with TaskCoach")
 (defvar todotxt-repetition-tag "r"
   "*The default tag used for repetition intervals.")
 
+(defvar todotxt-alert-tag "a"
+  "*The default tag used for alerts.")
+
 ;;
 ;; 6.2 Getters and Setters of Dates
 ;;
@@ -520,6 +524,11 @@ It defaults to 't'; set it to 'start' for integration with TaskCoach")
   "Get the threshold date of a todo."
   (todotxt-get-date todotxt-threshold-tag todo-as-string))
 
+(defun todotxt-get-alert (todo-as-string)
+  "Get the alert date of a todo."
+  (todotxt-get-date todotxt-alert-tag todo-as-string))
+
+
 (defun todotxt-set-due (new-date todo-as-string)
   "Set the due date of a todo."
   (todotxt-set-date todotxt-due-tag new-date todo-as-string))
@@ -527,6 +536,10 @@ It defaults to 't'; set it to 'start' for integration with TaskCoach")
 (defun todotxt-set-threshold (new-date todo-as-string)
   "Set the threshold date of a todo."
   (todotxt-set-date todotxt-threshold-tag new-date todo-as-string))
+
+(defun todotxt-set-alert (new-date todo-as-string)
+  "Get the alert date of a todo."
+  (todotxt-set-date todotxt-alert-tag new-date todo-as-string))
 
 ;;;
 ;;; 6.3 Lower level functions for setting/getting time
@@ -844,7 +857,51 @@ Similar to filter, it shows all todos."
 	(and (> (+ today-in-days n) due-in-days)
 		 (not (todotxt-today due))
 		 (not (todotxt-overdue due)))))
-  
+
+;;;
+;;; Send todos to reminders app
+;;;
+
+(defun todotxt-send-to-reminders ()
+  (interactive)
+  (let ( (todo (todotxt-get-current-todo)) )
+	(let ( (due (todotxt-get-due todo)) )
+	  (let ( (due-prop (if due
+						   (concat ", due date: date \"" (todotxt-date-to-us-string due) "\"")
+						 ""))
+			 (alert-prop (if due
+							 (concat 
+							  ", remind me date: date \"" 
+							  (todotxt-date-to-us-string (todotxt-add-interval '(0 0 0 -7 0 0) due))
+							  "\"")
+						   "")) )
+		(let ( (properties (concat "{ name: \"" todo "\"" due-prop alert-prop "}")) )
+		  (do-applescript
+		   (concat  "tell application \"Reminders\"
+                       make new reminder with properties " properties
+ 		            "  at the end of list \"Reminders\"\n"
+					"end tell"))
+		  (todotxt-toggle-done)
+		  (message "Todo sent to Reminders.app")
+		  )))))
+        
+(defun todotxt-date-to-us-string (date)
+  "Format a string according to the US standard.
+Used to send reminders to Reminders.app"
+  (date-to-string "%m/%d/%Y" date))
+
+;;
+;; To be introduced to improve the code a bit
+;;
+
+;; (defun date-to-standard-string (date)
+;;   "Format a date according to the todotxt mode format"
+;;   (format-time-string "%Y-%m-%d" (apply 'encode-time date)))
+
+;; (defun date-to-string (format date)
+;;   "Choose an arbitrary format for a string."
+;;   (format-time-string format (apply 'encode-time date)))
+
 
 ;;;
 ;;; 10. Sorting

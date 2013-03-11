@@ -77,11 +77,24 @@ Tasks can be sorted by creation date (if the creation date is prepended to the t
 
 <pre>
   M-x todotxt-sort-by-creation-date
-  M-x todotxt-group-by-project
-  M-x todotxt-group-by-status
+  M-x todotxt-sort-by-priority
+  M-x todotxt-sort-by-project
+  M-x todotxt-sort-by-status
 </pre>
 
-The commands create a special buffer with the todos grouped according to the specifications.
+*Important Remark* The mode does not keep track of the original order in which todos are written.  If you start using the sorting commands be aware of the fact that it might be impossible to automatically restore the todos in their original ordering.  One notable exception is if all todos are marked with the creation date and appended in chronological order to the file (a relatively common behavior).  In this scenario sorting by creation date restores the "original" ordering of the file.
+
+
+h2. Integrating with OSX's Reminders App
+
+For those using the application on OSX, @todotxt@ mode allows users to export a todo to the Reminders app.  The command respects the due date and automatically sets a reminder one week before the event's deadline; it also marks the todo as done in the @todo.txt@ file (since it becomes a todo of Reminders app).
+
+Invoke the command with:
+
+<pre>
+  M-x todotxt-send-to-reminders
+</pre>
+
 
 h1. Installation
 
