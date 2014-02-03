@@ -91,12 +91,12 @@
 	;("^.*#important.*" 0 '(:foreground "IndianRed")) ; special tag
 	("([A-Z]+)" . font-lock-builtin-face)
 	("\\([a-zA-Z0-9_-]+\\):\\([a-zA-Z0-9._-]+\\)" . font-lock-variable-name-face)
-	("-\\([a-zA-Z_-]+\\)" . font-lock-variable-name-face)
-	("+[a-zA-Z0-9_-]+" . font-lock-function-name-face)
-	("@[a-zA-Z0-9_-]+" . font-lock-type-face)
+	("+\\w+" . font-lock-function-name-face)
+	("@\\w+" . font-lock-type-face)
 	("#important" 0 '(:foreground "orange red")) ; special tag
 	("#waiting" 0 '(:foreground "dark orange")) ; special tag
-	("#[a-zA-Z0-9_-]+" . font-lock-comment-face)
+	("#\\w+" . font-lock-comment-face)
+	("-\\([a-zA-Z_-]+\\)" . font-lock-variable-name-face)
 	("^[0-9]+-[0-9]+-[0-9]+" 0 '(:foreground "gray90"))))
 
 ;;;
@@ -322,17 +322,17 @@ todo.txt file this is equivalent to copying a todo)"
 (defun todotxt-filter-by-project () 
   "List all todos of a project, completing over project names."
   (interactive)
-  (todotxt-filter-machinery "\\+[a-zA-Z0-9_-]+"))
+  (todotxt-filter-machinery "\\+\\w+"))
 
 (defun todotxt-filter-by-tag () 
   "List all todos with a tag, completing over tag names."
   (interactive)
-  (todotxt-filter-machinery "#[a-zA-Z0-9_-]+"))
+  (todotxt-filter-machinery "#\\w+"))
 
 (defun todotxt-filter-by-person () 
   "List all todos with a person tag (e.g. @someone)."
   (interactive)
-  (todotxt-filter-machinery "@[a-zA-Z0-9_-]+"))
+  (todotxt-filter-machinery "@\\w+"))
 
 (defun todotxt-filter-by-status () 
   "List all todos with given status (e.g. -overdue)."
@@ -408,17 +408,17 @@ The function is the basic infrastructure for special marked strings in todotxt."
 (defun todotxt-group-by-project ()
   "Present todos grouped by project"
   (interactive)
-  (todotxt-get-and-print-todos-with-keys "Project" (todotxt-collect-special-strings "\\+[a-zA-Z0-9_-]+")))
+  (todotxt-get-and-print-todos-with-keys "Project" (todotxt-collect-special-strings "\\+\\w+")))
 
 (defun todotxt-group-by-tag ()
   "Present todos grouped by tag"
   (interactive)
-  (todotxt-get-and-print-todos-with-keys "Tag" (todotxt-collect-special-strings "#[a-zA-Z0-9_-]+")))
+  (todotxt-get-and-print-todos-with-keys "Tag" (todotxt-collect-special-strings "#\\w+")))
 
 (defun todotxt-group-by-person ()
   "Present todos grouped by tag"
   (interactive)
-  (todotxt-get-and-print-todos-with-keys "Person" (todotxt-collect-special-strings "@[a-zA-Z0-9_-]+")))
+  (todotxt-get-and-print-todos-with-keys "Person" (todotxt-collect-special-strings "@\\w+")))
 
 ;;;
 ;;; 5.1 Lower level machinery for grouping
@@ -1061,6 +1061,12 @@ one encountered from the beginning of line."
 ;; 	(goto-char (region-beginning))
 ;; 	(line-end-position)))
 
+(defvar todotxt-mode-syntax-table
+  (let ((tab (make-syntax-table text-mode-syntax-table)))
+    (modify-syntax-entry ?- "w" tab)
+    (modify-syntax-entry ?_ "w" tab)
+    tab)
+  "Syntax table for `todotxt-mode'.")
 
 ;;;
 ;;; Todotxt Major Mode
