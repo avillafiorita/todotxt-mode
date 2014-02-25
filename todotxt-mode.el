@@ -248,7 +248,7 @@ See also todotxt-pri and todotxt-nopri."
   (interactive)
   (save-excursion
     (beginning-of-line)
-    (if (looking-at "x \\([0-9]+-[0-9]+-[0-9]+ \\)*")
+    (if (looking-at "x \\([0-9]+-[0-9]+-[0-9]+ \\)")
 		(delete-region (match-beginning 0) (match-end 0))
 	  (todotxt-complete-and-instantiate))))
 
