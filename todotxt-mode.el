@@ -403,7 +403,7 @@ The function is the basic infrastructure for special marked strings in todotxt."
   (interactive)
   (progn
 	(todotxt-mark-dated-todos)
-	(todotxt-get-and-print-todos-with-keys "Date" '("-today" "-ucpoming" "-overdue"))))
+	(todotxt-get-and-print-todos-with-keys "Date" '("-today" "-upcoming" "-overdue"))))
 
 (defun todotxt-group-by-project ()
   "Present todos grouped by project"
