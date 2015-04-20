@@ -1,54 +1,59 @@
-;;; -*- MODE: emacs-lisp; tab-width: 4 -*-
-;;; todotxt-mode is a major mode for editing todo.txt files
-;;; (see http://www.todotxt.com for more information about format and apps)
-;;;
-;;; (c) 2012, 2013 Adolfo Villafiorita <adolfo.villafiorita@me.com>
-;;;
-;;; This code is NOT part of GNU Emacs and is distributed under the conditions
-;;; of the MIT License
-;;;
-;;; The MIT License
-;;;
-;;; Permission is hereby granted, free of charge, to any person obtaining a copy
-;;; of this software and associated documentation files (the "Software"), to deal
-;;; in the Software without restriction, including without limitation the rights
-;;; to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-;;; copies of the Software, and to permit persons to whom the Software is
-;;; furnished to do so, subject to the following conditions:
-;;;
-;;; The above copyright notice and this permission notice shall be included in
-;;; all copies or substantial portions of the Software.
-;;;
-;;; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-;;; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-;;; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-;;; THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-;;; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-;;; FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-;;; DEALINGS IN THE SOFTWARE.
-;;;
+;;; todotxt-mode.el --- Major mode for editing todo.txt files
 
-;;;
-;;; Installation instructions.
-;;;
-;;; Put in your .emacs file:
-;;;
-;;; (add-to-list 'load-path "<DIR WHERE TODOTXT-MODE LIVES>")
-;;; (require 'todotxt-mode)
-;;;
-;;; Usage instruction
-;;;
-;;; Open a todo.txt file
-;;;
-;;;   M-x todotxt-mode
-;;;   M-x describe-mode
-;;;
-;;; For some more customization:
-;;;
-;;;   (setq todotxt-default-file (expand-file-name "<<WHERE YOUR TODO FILE LIVES>>"))
-;;;   (define-key global-map "\C-ct" 'todotxt-add-todo)
-;;;   (define-key global-map "\C-co" 'todotxt-open-file)
-;;;
+;; Copyright (C) 2012, 2013 Adolfo Villafiorita
+
+;; Author: Adolfo Villafiorita <adolfo.villafiorita@me.com>
+;; Keywords: wp, files
+
+;; This code is NOT part of GNU Emacs and is distributed under the conditions
+;; of the MIT License
+
+;; The MIT License
+
+;; Permission is hereby granted, free of charge, to any person obtaining a copy
+;; of this software and associated documentation files (the "Software"), to deal
+;; in the Software without restriction, including without limitation the rights
+;; to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+;; copies of the Software, and to permit persons to whom the Software is
+;; furnished to do so, subject to the following conditions:
+
+;; The above copyright notice and this permission notice shall be included in
+;; all copies or substantial portions of the Software.
+
+;; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+;; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+;; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+;; THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+;; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+;; FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+;; DEALINGS IN THE SOFTWARE.
+
+;;; Commentary:
+
+;; todotxt-mode is a major mode for editing todo.txt files.
+;; (see http://www.todotxt.com for more information about format and apps)
+
+;; Installation:
+
+;; Put in your .emacs file:
+
+;; (add-to-list 'load-path "<DIR WHERE TODOTXT-MODE LIVES>")
+;; (require 'todotxt-mode)
+
+;; Usage:
+
+;; Open a todo.txt file
+
+;;   M-x todotxt-mode
+;;   M-x describe-mode
+
+;; For some more customization:
+
+;;   (setq todotxt-default-file (expand-file-name "<<WHERE YOUR TODO FILE LIVES>>"))
+;;   (define-key global-map "\C-ct" 'todotxt-add-todo)
+;;   (define-key global-map "\C-co" 'todotxt-open-file)
+
+;;; Code:
 
 (defvar todotxt-mode-map nil "Keymap for todotxt-mode")
 (when (not todotxt-mode-map)
@@ -1119,3 +1124,9 @@ The following actions are taken by todotxt-mode:
 
 (provide 'todotxt-mode)
 
+;; Local Variables:
+;; mode: emacs-lisp
+;; tab-width: 4
+;; End:
+
+;;; todotxt-mode.el ends here
