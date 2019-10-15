@@ -89,6 +89,7 @@
 
 (defconst todotxt-nord-colours
   '(
+    ("nord0" . "#2e3440")
     ("nord7" . "#5e81ac")
     ("nord11" . "#bf616a")
     ("nord12" . "#d08770")
@@ -113,9 +114,8 @@
 (defface todotxt-a-priority-face
   (list
    (list 't
-         :underline (list
-                     :color (todotxt-nord "nord11")
-                     :style 'wave)
+         :background (todotxt-nord "nord11")
+         :foreground (todotxt-nord "nord0")
          )
    )
   "Face for tasks with A priority"
@@ -124,10 +124,8 @@
 (defface todotxt-b-priority-face
   (list
    (list 't
-         :underline (list
-                     :color (todotxt-nord "nord12")
-                     :style 'wave
-                     )
+         :background (todotxt-nord "nord12")
+         :foreground (todotxt-nord "nord0")
          )
    )
   "Face for B priority tasks"
@@ -136,10 +134,8 @@
 (defface todotxt-c-priority-face
   (list
    (list 't
-         :underline (list
-                     :color (todotxt-nord "nord13")
-                     :style 'wave
-                     )
+         :background (todotxt-nord "nord13")
+         :foreground (todotxt-nord "nord0")
          )
    )
   "Face for C priority tasks"
@@ -161,20 +157,20 @@
 (setq todotxt-mode-keywords
   '(
 	("^x .*$" 0 'todotxt-done-face)
-	("^(A).*$" 0 'todotxt-a-priority-face)
-	("^(B).*$" 0 'todotxt-b-priority-face)
-	("^(C).*$" 0 'todotxt-c-priority-face)
+	("^(A)" 0 'todotxt-a-priority-face)
+	("^(B)" 0 'todotxt-b-priority-face)
+	("^(C)" 0 'todotxt-c-priority-face)
 	;("^.*#waiting.*" 0 '(:foreground "DeepPink1")) ; special tag
 	;("^.*#important.*" 0 '(:foreground "IndianRed")) ; special tag
 	("([A-Z]+)" . font-lock-builtin-face)
 	("\\([a-zA-Z0-9_-]+\\):\\([a-zA-Z0-9._-]+\\)" . font-lock-variable-name-face)
-	("+[[:alnum:]_]+" . font-lock-function-name-face)
-	("@[[:alnum:]_]+" . font-lock-type-face)
+	("+[[:alnum:]_]+" 0 font-lock-function-name-face)
+	("@[[:alnum:]_]+" 0 font-lock-type-face)
 	("#important" 0 '(:foreground "orange red")) ; special tag
 	("#waiting" 0 '(:foreground "dark orange")) ; special tag
 	("#\\w+" . font-lock-comment-face)
 	("-\\([a-zA-Z_-]+\\)" . font-lock-variable-name-face)
-	("^[0-9]+-[0-9]+-[0-9]+" 0 'todotxt-date-face)))
+	("[0-9]+-[0-9]+-[0-9]+" 0 'todotxt-date-face)))
 
 ;;;
 ;;; Todotxt Functions for managing the file
