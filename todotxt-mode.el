@@ -168,8 +168,8 @@
 	;("^.*#important.*" 0 '(:foreground "IndianRed")) ; special tag
 	("([A-Z]+)" . font-lock-builtin-face)
 	("\\([a-zA-Z0-9_-]+\\):\\([a-zA-Z0-9._-]+\\)" . font-lock-variable-name-face)
-	("+\\w+" . font-lock-function-name-face)
-	("@\\w+" . font-lock-type-face)
+	("+[[:alnum:]_]+" . font-lock-function-name-face)
+	("@[[:alnum:]_]+" . font-lock-type-face)
 	("#important" 0 '(:foreground "orange red")) ; special tag
 	("#waiting" 0 '(:foreground "dark orange")) ; special tag
 	("#\\w+" . font-lock-comment-face)
