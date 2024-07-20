@@ -728,16 +728,16 @@ Do so only for the first N-th elements, where N is the length of the shortest li
 	("yearly"   . (lambda (x) '(0 0 0 0 0 1)))
 	("\\([0-9]+\\)\\.days?"   . (lambda (x) (progn
 											(string-match "\\([0-9]+\\)\\.days?" x)
-											(list 0 0 0 (string-to-int (match-string 1 x)) 0 0))))
+											(list 0 0 0 (string-to-number (match-string 1 x)) 0 0))))
 	("\\([0-9]+\\)\\.weeks?"  . (lambda (x) (progn
 											(string-match "\\([0-9]+\\)\\.weeks?" x)
-											(list 0 0 0 (* 7 (string-to-int (match-string 1 x))) 0 0))))
+											(list 0 0 0 (* 7 (string-to-number (match-string 1 x))) 0 0))))
 	("\\([0-9]+\\)\\.months?" . (lambda (x) (progn
 											(string-match "\\([0-9]+\\)\\.months?" x)
-											(list 0 0 0 0 (string-to-int (match-string 1 x)) 0))))
+											(list 0 0 0 0 (string-to-number (match-string 1 x)) 0))))
 	("\\([0-9]+\\)\\.years?"  . (lambda (x) (progn
 											(string-match "\\([0-9]+\\)\\.years?" x)
-											(list 0 0 0 0 0 (string-to-int (match-string 1 x))))))))
+											(list 0 0 0 0 0 (string-to-number (match-string 1 x))))))))
 
 
 (defun todotxt-get-repetition (todo-as-string)
