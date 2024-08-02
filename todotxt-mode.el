@@ -728,16 +728,16 @@ Do so only for the first N-th elements, where N is the length of the shortest li
 	("yearly"   . (lambda (x) '(0 0 0 0 0 1)))
 	("\\([0-9]+\\)\\.days?"   . (lambda (x) (progn
 											(string-match "\\([0-9]+\\)\\.days?" x)
-											(list 0 0 0 (string-to-int (match-string 1 x)) 0 0))))
+											(list 0 0 0 (string-to-number (match-string 1 x)) 0 0))))
 	("\\([0-9]+\\)\\.weeks?"  . (lambda (x) (progn
 											(string-match "\\([0-9]+\\)\\.weeks?" x)
-											(list 0 0 0 (* 7 (string-to-int (match-string 1 x))) 0 0))))
+											(list 0 0 0 (* 7 (string-to-number (match-string 1 x))) 0 0))))
 	("\\([0-9]+\\)\\.months?" . (lambda (x) (progn
 											(string-match "\\([0-9]+\\)\\.months?" x)
-											(list 0 0 0 0 (string-to-int (match-string 1 x)) 0))))
+											(list 0 0 0 0 (string-to-number (match-string 1 x)) 0))))
 	("\\([0-9]+\\)\\.years?"  . (lambda (x) (progn
 											(string-match "\\([0-9]+\\)\\.years?" x)
-											(list 0 0 0 0 0 (string-to-int (match-string 1 x))))))))
+											(list 0 0 0 0 0 (string-to-number (match-string 1 x))))))))
 
 
 (defun todotxt-get-repetition (todo-as-string)
@@ -782,35 +782,6 @@ of the understood repetition strings."
 		  (car list)
 		(todotxt-find-if predicate (cdr list)))
 	nil))
-
-;;;
-;;; 5.4 Chronic Expression
-;;;
-
-(defvar todotxt-repetitions-assoc nil
-  "Association list of repetitions and functions that take as
-  input a string and return the time interval specified by the
-  repetition, using the 'time' conventions.")
-
-(setq todotxt-repetitions-assoc
-  '(("[0-9] day"    . (lambda (x) '(0 0 0 1 0 0)))
-
-
-	("weekly"   . (lambda (x) '(0 0 0 7 0 0)))
-	("monthly"  . (lambda (x) '(0 0 0 0 1 0)))
-	("yearly"   . (lambda (x) '(0 0 0 0 0 1)))
-	("\\([0-9]+\\)\\.day"   . (lambda (x) (progn
-											(string-match "\\([0-9]+\\)\\.day" x)
-											(list 0 0 0 (string-to-int (match-string 1 x)) 0 0))))
-	("\\([0-9]+\\)\\.week"  . (lambda (x) (progn
-											(string-match "\\([0-9]+\\)\\.week" x)
-											(list 0 0 0 (* 7 (string-to-int (match-string 1 x))) 0 0))))
-	("\\([0-9]+\\)\\.month" . (lambda (x) (progn
-											(string-match "\\([0-9]+\\)\\.month" x)
-											(list 0 0 0 0 (string-to-int (match-string 1 x)) 0))))
-	("\\([0-9]+\\)\\.year"  . (lambda (x) (progn
-											(string-match "\\([0-9]+\\)\\.year" x)
-											(list 0 0 0 0 0 (string-to-int (match-string 1 x))))))))
 
 ;;;
 ;;; 7. Mark tasks according to dates
